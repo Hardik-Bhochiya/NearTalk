@@ -7,6 +7,7 @@ import 'providers/community_provider.dart';
 import 'providers/question_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/notification_provider.dart';
+import 'widgets/mobile_device_frame.dart';
 import 'screens/main_nav_screen.dart';
 import 'screens/auth/login_screen.dart';
 
@@ -41,6 +42,11 @@ class NearTalkApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeProvider.themeMode,
+      builder: (context, child) {
+        return MobileDeviceFrame(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: authProvider.isAuthenticated
           ? const MainNavScreen()
           : const LoginScreen(),

@@ -51,94 +51,103 @@ class _MainNavScreenState extends State<MainNavScreen> {
             ),
           ],
         ),
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: SafeArea(
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               // 1. Home
-              _buildNavItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                isSelected: _currentIndex == 0,
-                onTap: () => setState(() => _currentIndex = 0),
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
+              Expanded(
+                child: _buildNavItem(
+                  icon: Icons.home_rounded,
+                  label: 'Home',
+                  isSelected: _currentIndex == 0,
+                  onTap: () => setState(() => _currentIndex = 0),
+                  activeColor: activeColor,
+                  inactiveColor: inactiveColor,
+                ),
               ),
               // 2. Communities
-              _buildNavItem(
-                icon: Icons.groups_outlined,
-                selectedIcon: Icons.groups_rounded,
-                label: 'Communities',
-                isSelected: _currentIndex == 1,
-                onTap: () => setState(() => _currentIndex = 1),
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
+              Expanded(
+                child: _buildNavItem(
+                  icon: Icons.groups_outlined,
+                  selectedIcon: Icons.groups_rounded,
+                  label: 'Communities',
+                  isSelected: _currentIndex == 1,
+                  onTap: () => setState(() => _currentIndex = 1),
+                  activeColor: activeColor,
+                  inactiveColor: inactiveColor,
+                ),
               ),
               // 3. Center Elevated Ask Button
-              InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      fullscreenDialog: true,
-                      builder: (_) => const AskQuestionScreen(),
-                    ),
-                  );
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0x667C3AED),
-                            blurRadius: 8,
-                            offset: Offset(0, 3),
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        fullscreenDialog: true,
+                        builder: (_) => const AskQuestionScreen(),
+                      ),
+                    );
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x667C3AED),
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.add, color: Colors.white, size: 24),
                       ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 26),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      'Ask',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: activeColor,
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Ask',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: activeColor,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               // 4. Chats
-              _buildNavItem(
-                icon: Icons.chat_bubble_outline_rounded,
-                selectedIcon: Icons.chat_bubble_rounded,
-                label: 'Chats',
-                isSelected: _currentIndex == 3,
-                onTap: () => setState(() => _currentIndex = 3),
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
+              Expanded(
+                child: _buildNavItem(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  selectedIcon: Icons.chat_bubble_rounded,
+                  label: 'Chats',
+                  isSelected: _currentIndex == 3,
+                  onTap: () => setState(() => _currentIndex = 3),
+                  activeColor: activeColor,
+                  inactiveColor: inactiveColor,
+                ),
               ),
               // 5. Profile
-              _buildNavItem(
-                icon: Icons.person_outline_rounded,
-                selectedIcon: Icons.person_rounded,
-                label: 'Profile',
-                isSelected: _currentIndex == 4,
-                onTap: () => setState(() => _currentIndex = 4),
-                activeColor: activeColor,
-                inactiveColor: inactiveColor,
+              Expanded(
+                child: _buildNavItem(
+                  icon: Icons.person_outline_rounded,
+                  selectedIcon: Icons.person_rounded,
+                  label: 'Profile',
+                  isSelected: _currentIndex == 4,
+                  onTap: () => setState(() => _currentIndex = 4),
+                  activeColor: activeColor,
+                  inactiveColor: inactiveColor,
+                ),
               ),
             ],
           ),
@@ -160,20 +169,22 @@ class _MainNavScreenState extends State<MainNavScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               isSelected ? (selectedIcon ?? icon) : icon,
-              size: 24,
+              size: 22,
               color: isSelected ? activeColor : inactiveColor,
             ),
-            const SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10.5,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? activeColor : inactiveColor,
               ),

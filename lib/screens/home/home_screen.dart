@@ -24,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _quickQuestionController = TextEditingController();
   bool _isAnonymousPost = false;
+  String _selectedFilter = 'Trending';
 
   @override
   void dispose() {
@@ -82,8 +83,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final notifProvider = context.watch<NotificationProvider>();
 
     final selectedRegion = communityProvider.selectedRegion;
-    final joinedCommunities = communityProvider.communities.take(3).toList();
-    final questions = questionProvider.filteredQuestions;
+    final communities = communityProvider.communities;
+    var questions = questionProvider.filteredQuestions;
+
+    if (_selectedFilter == 'Trending') {
+      questions = questionProvider.trendingQuestions;
+    } else if (_selectedFilter == 'Unanswered') {
+      questions = questions.where((q) => q.replyCount == 0).toList();
+    }
+
     final user = auth.currentUser;
 
     return Scaffold(
@@ -112,12 +120,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const Icon(Icons.location_on_rounded, size: 14, color: Color(0xFF7C3AED)),
                   const SizedBox(width: 4),
-                  Text(
-                    selectedRegion?.name ?? 'DDU, Nadiad, Gujarat',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                  Flexible(
+                    child: Text(
+                      selectedRegion?.name ?? 'DDU, Nadiad, Gujarat',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                      ),
                     ),
                   ),
                   const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF7C3AED)),
@@ -127,7 +138,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          // Notification Bell with interactive Sheet
           Stack(
             alignment: Alignment.topRight,
             children: [
@@ -154,7 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
             ],
           ),
-          // User Avatar
           Padding(
             padding: const EdgeInsets.only(right: 16, left: 4),
             child: CircleAvatar(
@@ -179,12 +188,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            'Welcome to NearTalk!',
-                            style: TextStyle(
-                              fontSize: 19,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          Flexible(
+                            child: Text(
+                              'Welcome to NearTalk!',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -195,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         'Ask people who know your place.',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 12.5,
                           color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         ),
                       ),
@@ -203,8 +214,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Container(
-                  width: 90,
-                  height: 65,
+                  width: 80,
+                  height: 60,
                   decoration: BoxDecoration(
                     color: const Color(0xFFEDE9FE).withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(16),
@@ -212,21 +223,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Stack(
                     alignment: Alignment.center,
                     children: [
-                      Icon(Icons.public, size: 48, color: Color(0xFFC4B5FD)),
-                      Positioned(
-                        top: 10,
-                        right: 18,
-                        child: Icon(Icons.location_on, size: 24, color: Color(0xFF7C3AED)),
-                      ),
+                      Icon(Icons.public, size: 42, color: Color(0xFFC4B5FD)),
                       Positioned(
                         top: 8,
-                        left: 10,
-                        child: Icon(Icons.help_outline, size: 14, color: Color(0xFF8B5CF6)),
+                        right: 14,
+                        child: Icon(Icons.location_on, size: 20, color: Color(0xFF7C3AED)),
                       ),
                       Positioned(
-                        bottom: 12,
-                        right: 8,
-                        child: Icon(Icons.chat_bubble, size: 14, color: Color(0xFF6D28D9)),
+                        top: 6,
+                        left: 8,
+                        child: Icon(Icons.help_outline, size: 12, color: Color(0xFF8B5CF6)),
+                      ),
+                      Positioned(
+                        bottom: 10,
+                        right: 6,
+                        child: Icon(Icons.chat_bubble, size: 12, color: Color(0xFF6D28D9)),
                       ),
                     ],
                   ),
@@ -320,114 +331,117 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Post as row
-                  Row(
-                    children: [
-                      Text(
-                        'Post as',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Hardik (Public)
-                      InkWell(
-                        onTap: () => setState(() => _isAnonymousPost = false),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: !_isAnonymousPost ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: !_isAnonymousPost
-                                  ? const Color(0xFF7C3AED)
-                                  : (isDark ? const Color(0xFF334155) : const Color(0xFFD1D5DB)),
-                            ),
+                  // Post as scrollable row
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        Text(
+                          'Post as',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.person_rounded,
-                                size: 14,
-                                color: !_isAnonymousPost ? const Color(0xFF7C3AED) : const Color(0xFF6B7280),
+                        ),
+                        const SizedBox(width: 8),
+                        // Hardik (Public)
+                        InkWell(
+                          onTap: () => setState(() => _isAnonymousPost = false),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: !_isAnonymousPost ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: !_isAnonymousPost
+                                    ? const Color(0xFF7C3AED)
+                                    : (isDark ? const Color(0xFF334155) : const Color(0xFFD1D5DB)),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${user?.name ?? "Hardik"} (Public)',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.person_rounded,
+                                  size: 14,
                                   color: !_isAnonymousPost ? const Color(0xFF7C3AED) : const Color(0xFF6B7280),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      // Anonymous
-                      InkWell(
-                        onTap: () => setState(() => _isAnonymousPost = true),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: _isAnonymousPost ? Colors.white : Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: _isAnonymousPost
-                                  ? const Color(0xFF7C3AED)
-                                  : (isDark ? const Color(0xFF334155) : const Color(0xFFD1D5DB)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${user?.name ?? "Hardik"} (Public)',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: !_isAnonymousPost ? const Color(0xFF7C3AED) : const Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.masks_rounded,
-                                size: 14,
-                                color: _isAnonymousPost ? const Color(0xFF7C3AED) : const Color(0xFF6B7280),
+                        ),
+                        const SizedBox(width: 6),
+                        // Anonymous
+                        InkWell(
+                          onTap: () => setState(() => _isAnonymousPost = true),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _isAnonymousPost ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: _isAnonymousPost
+                                    ? const Color(0xFF7C3AED)
+                                    : (isDark ? const Color(0xFF334155) : const Color(0xFFD1D5DB)),
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Anonymous',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.masks_rounded,
+                                  size: 14,
                                   color: _isAnonymousPost ? const Color(0xFF7C3AED) : const Color(0xFF6B7280),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Anonymous',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: _isAnonymousPost ? const Color(0xFF7C3AED) : const Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      const Spacer(),
-                      // + Ask a Question Button
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              fullscreenDialog: true,
-                              builder: (_) => const AskQuestionScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6D28D9),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        const SizedBox(width: 8),
+                        // + Ask a Question Button
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                fullscreenDialog: true,
+                                builder: (_) => const AskQuestionScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6D28D9),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Text(
+                            '+ Ask a Question',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                          ),
                         ),
-                        child: const Text(
-                          '+ Ask a Question',
-                          style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -436,14 +450,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // "Your Communities" Header
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Your Communities',
-                  style: TextStyle(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                Expanded(
+                  child: Text(
+                    'Your Communities',
+                    style: TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
                   ),
                 ),
                 InkWell(
@@ -470,29 +485,34 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
 
-            // 3 Horizontal Community Cards
-            Row(
-              children: joinedCommunities.map((c) {
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: _buildCommunityCard(context, c, isDark),
-                  ),
-                );
-              }).toList(),
+            // Horizontal Smooth Scroll Communities Carousel
+            SizedBox(
+              height: 140,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: communities.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  return SizedBox(
+                    width: 145,
+                    child: _buildCommunityCard(context, communities[index], isDark),
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 22),
 
             // "Recent Discussions" Header
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Recent Discussions',
-                  style: TextStyle(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                Expanded(
+                  child: Text(
+                    'Recent Discussions',
+                    style: TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
                   ),
                 ),
                 InkWell(
@@ -517,7 +537,43 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
+
+            // Feed Filter Chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: ['Trending', 'Latest', 'Unanswered'].map((filter) {
+                  final isSelected = _selectedFilter == filter;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8, bottom: 8),
+                    child: FilterChip(
+                      selected: isSelected,
+                      label: Text(
+                        filter == 'Trending' ? '🔥 Trending' : filter == 'Latest' ? '🆕 Latest' : '❓ Unanswered',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white
+                              : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                        ),
+                      ),
+                      selectedColor: const Color(0xFF7C3AED),
+                      backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      showCheckmark: false,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      side: BorderSide.none,
+                      onSelected: (val) {
+                        setState(() => _selectedFilter = filter);
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 6),
 
             // Discussion Cards List
             ...questions.map((q) => _buildDiscussionCard(context, q, isDark)),
@@ -626,22 +682,23 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  width: 38,
-                  height: 38,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: Color(community.bannerColorHex),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: Text(community.iconEmoji, style: const TextStyle(fontSize: 18)),
+                  child: Text(community.iconEmoji, style: const TextStyle(fontSize: 16)),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 18, color: Color(0xFF94A3B8)),
+                  icon: const Icon(Icons.more_vert, size: 16, color: Color(0xFF94A3B8)),
                   padding: EdgeInsets.zero,
                   onSelected: (val) {
                     if (val == 'view') {
@@ -677,13 +734,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               community.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13.5,
+                fontSize: 12.5,
                 fontWeight: FontWeight.bold,
                 color: isDark ? Colors.white : const Color(0xFF0F172A),
               ),
@@ -693,16 +750,19 @@ class _HomeScreenState extends State<HomeScreen> {
               community.category,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+              style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Row(
               children: [
-                const Icon(Icons.people_alt_outlined, size: 13, color: Color(0xFF64748B)),
-                const SizedBox(width: 4),
-                Text(
-                  '${community.memberCount >= 1000 ? "${(community.memberCount / 1000).toStringAsFixed(1)}K" : community.memberCount} members',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                const Icon(Icons.people_alt_outlined, size: 12, color: Color(0xFF64748B)),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(
+                    '${community.memberCount >= 1000 ? "${(community.memberCount / 1000).toStringAsFixed(1)}K" : community.memberCount} members',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                  ),
                 ),
               ],
             ),
@@ -775,32 +835,40 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        q.authorName,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF0F172A),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        '• 2h ago',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              q.authorName,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            '• 2h',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                          ),
+                        ],
                       ),
                       if (q.authorBadge != null) ...[
-                        const SizedBox(width: 6),
+                        const SizedBox(height: 2),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             '⭐ ${q.authorBadge}',
-                            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                            style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
                           ),
                         ),
                       ],
@@ -809,14 +877,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 // Community pill tag
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
                     color: pillBg,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
                     q.communityName,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: pillText),
+                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: pillText),
                   ),
                 ),
                 IconButton(
@@ -831,7 +899,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               q.title,
               style: TextStyle(
-                fontSize: 14.5,
+                fontSize: 14,
                 fontWeight: FontWeight.w700,
                 color: isDark ? Colors.white : const Color(0xFF0F172A),
               ),
@@ -845,11 +913,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 4),
                     Text(
                       '${q.replyCount > 0 ? q.replyCount : 12} replies',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 InkWell(
                   onTap: () => questionProvider.toggleUpvoteQuestion(q.id),
                   borderRadius: BorderRadius.circular(12),
@@ -864,7 +932,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         '${q.upvotes > 0 ? q.upvotes : 8} helpful',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           color: q.isUpvotedByMe ? const Color(0xFF6D28D9) : const Color(0xFF64748B),
                           fontWeight: q.isUpvotedByMe ? FontWeight.bold : FontWeight.w500,
                         ),

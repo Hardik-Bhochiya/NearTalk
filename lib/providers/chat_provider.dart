@@ -168,6 +168,67 @@ class ChatProvider extends ChangeNotifier {
       senderName: isAnonymous ? 'Anonymous' : currentUser.name,
       isAnonymous: isAnonymous,
     );
+
+    // Realistic Simulated Peer Reply (if not in automated tests)
+    if (!SocketService.disabledForTests) {
+      _triggerSimulatedPeerReply(roomId, content);
+    }
+  }
+
+  void _triggerSimulatedPeerReply(String roomId, String prompt) {
+    final isRahulDM = roomId.contains('rahul');
+    final responderName = isRahulDM ? 'Rahul (Community Helper)' : 'DDU Peer';
+    final responderId = isRahulDM ? 'u-rahul' : 'u-senior';
+
+    // 1. Show Typing Indicator after 600ms
+    Timer(const Duration(milliseconds: 600), () {
+      _typingUser[roomId] = responderName;
+      notifyListeners();
+    });
+
+    // 2. Deliver Realistic Response after 2.0s
+    Timer(const Duration(milliseconds: 2000), () {
+      _typingUser[roomId] = null;
+
+      String replyContent = 'Got it! Check the DDU notice board or student portal for updates.';
+      final lower = prompt.toLowerCase();
+
+      if (lower.contains('basketball') || lower.contains('court') || lower.contains('gym')) {
+        replyContent = 'Yes! Ground is open till 7:00 PM today. Let me know if you want to team up! 🏀';
+      } else if (lower.contains('canteen') || lower.contains('food') || lower.contains('lunch')) {
+        replyContent = 'The canteen behind library has fresh meals ready by 12:30 PM! 🍲';
+      } else if (lower.contains('exam') || lower.contains('timetable') || lower.contains('syllabus')) {
+        replyContent = 'Mid-sem timetable is uploaded in the student portal under Exam Section.';
+      } else if (lower.contains('hostel') || lower.contains('room') || lower.contains('mess')) {
+        replyContent = 'Hostel warden office is open between 4 PM to 6 PM for inquiries.';
+      } else if (lower.contains('hi') || lower.contains('hey') || lower.contains('hello')) {
+        replyContent = 'Hey there! How can I help you today at DDU? 👋';
+      }
+
+      final peerMsg = ChatMessage(
+        id: MockDataService.generateId(),
+        roomId: roomId,
+        senderId: responderId,
+        senderName: responderName,
+        content: replyContent,
+        timestamp: DateTime.now(),
+        isMine: false,
+      );
+
+      if (!_messages.containsKey(roomId)) {
+        _messages[roomId] = [];
+      }
+      _messages[roomId]!.add(peerMsg);
+
+      final index = _rooms.indexWhere((r) => r.id == roomId);
+      if (index != -1) {
+        _rooms[index] = _rooms[index].copyWith(
+          lastMessage: replyContent,
+          lastMessageTime: DateTime.now(),
+        );
+      }
+      notifyListeners();
+    });
   }
 
   @override
