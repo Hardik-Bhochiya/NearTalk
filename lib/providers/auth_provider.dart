@@ -148,6 +148,23 @@ class AuthProvider extends ChangeNotifier {
         majorOrBio: majorOrBio,
       );
 
+  Future<void> updateProfile({
+    required String name,
+    required String campusOrCity,
+    required String majorOrBio,
+  }) async {
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(
+        name: name,
+        campusOrCity: campusOrCity,
+        majorOrBio: majorOrBio,
+      );
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('saved_user', jsonEncode(_currentUser!.toJson()));
+      notifyListeners();
+    }
+  }
+
   void continueAsGuest() {
     _currentUser = null;
     _isAuthenticated = true;

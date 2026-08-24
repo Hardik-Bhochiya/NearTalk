@@ -27,13 +27,13 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
 
   final List<String> _suggestedTags = [
     'Academics',
-    'Housing',
+    'MidSem',
+    'Hostel',
     'Food',
-    'CampusLife',
+    'Sports',
     'Transport',
     'Events',
-    'Internships',
-    'BudgetTips',
+    'Placements',
   ];
 
   @override
@@ -73,9 +73,9 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
               : 'c1');
 
       final targetCommunity = communityProvider.getCommunityById(targetCommunityId);
-      final communityName = targetCommunity?.name ?? 'General Community';
-      final regionId = targetCommunity?.regionId ?? communityProvider.selectedRegion?.id ?? 'region-1';
-      final regionName = targetCommunity?.regionName ?? communityProvider.selectedRegion?.name ?? 'Silicon Valley Campus';
+      final communityName = targetCommunity?.name ?? 'DDU Students';
+      final regionId = targetCommunity?.regionId ?? communityProvider.selectedRegion?.id ?? 'region-ddu';
+      final regionName = targetCommunity?.regionName ?? communityProvider.selectedRegion?.name ?? 'DDU, Nadiad, Gujarat';
 
       questionProvider.askQuestion(
         title: _titleController.text.trim(),
@@ -86,7 +86,7 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
         regionName: regionName,
         user: currentUser,
         isAnonymous: _isAnonymous,
-        tags: _selectedTags.isNotEmpty ? _selectedTags : ['General'],
+        tags: _selectedTags.isNotEmpty ? _selectedTags : ['DDU', 'General'],
       );
 
       Navigator.pop(context);
@@ -94,10 +94,10 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
         SnackBar(
           content: Text(
             _isAnonymous
-                ? 'Question posted anonymously 🎭'
+                ? 'Question posted anonymously to $communityName! 🎭'
                 : 'Question posted to $communityName!',
           ),
-          backgroundColor: const Color(0xFF4F46E5),
+          backgroundColor: const Color(0xFF6D28D9),
         ),
       );
     }
@@ -114,14 +114,17 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
     }
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0B0F19) : const Color(0xFFFBFBFE),
       appBar: AppBar(
-        title: const Text('Ask Your Community'),
+        backgroundColor: isDark ? const Color(0xFF0B0F19) : Colors.white,
+        elevation: 0,
+        title: const Text('Ask Your Community', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           TextButton(
             onPressed: _handleSubmit,
             child: const Text(
               'Post',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF7C3AED)),
             ),
           ),
           const SizedBox(width: 8),
@@ -138,14 +141,20 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
                 // Community Selector
                 const Text(
                   'Select Target Community',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   initialValue: _selectedCommunityId,
                   isExpanded: true,
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: InputDecoration(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    filled: true,
+                    fillColor: isDark ? const Color(0xFF151C2C) : Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                    ),
                   ),
                   items: communities.map((c) {
                     return DropdownMenuItem(
@@ -175,7 +184,7 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
                 CustomTextField(
                   controller: _titleController,
                   labelText: 'Question Title',
-                  hintText: 'e.g. Where can I find affordable textbooks on campus?',
+                  hintText: 'e.g. Where can I find mid-sem question papers for 4th sem CE?',
                   maxLines: 2,
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) return 'Please enter a title';
@@ -189,15 +198,15 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
                 CustomTextField(
                   controller: _contentController,
                   labelText: 'Details / Context (Optional)',
-                  hintText: 'Share more context so locals and seniors can give specific advice...',
+                  hintText: 'Share more context so seniors and professors can give exact answers...',
                   maxLines: 4,
                 ),
                 const SizedBox(height: 20),
 
                 // Tags Section
                 const Text(
-                  'Add Tags',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
+                  'Add Relevant Tags',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -226,16 +235,23 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
                     Expanded(
                       child: TextField(
                         controller: _tagInputController,
-                        decoration: const InputDecoration(
-                          hintText: 'Type custom tag and tap add...',
-                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: InputDecoration(
+                          hintText: 'Type custom tag (e.g. DDU_Exam)...',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF151C2C) : Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+                          ),
                         ),
                         onSubmitted: _addTag,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    IconButton.filledTonal(
-                      icon: const Icon(Icons.add),
+                    IconButton.filled(
+                      style: IconButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+                      icon: const Icon(Icons.add, color: Colors.white),
                       onPressed: () => _addTag(_tagInputController.text),
                     ),
                   ],
@@ -248,57 +264,53 @@ class _AskQuestionScreenState extends State<AskQuestionScreen> {
                   decoration: BoxDecoration(
                     color: _isAnonymous
                         ? const Color(0xFFFDF2F8)
-                        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC)),
-                    borderRadius: BorderRadius.circular(16),
+                        : (isDark ? const Color(0xFF151C2C) : Colors.white),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: _isAnonymous
                           ? const Color(0xFFF472B6)
                           : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                     ),
                   ),
-                  child: Column(
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: _isAnonymous
-                                  ? const Color(0xFFFCE7F3)
-                                  : (isDark ? const Color(0xFF151C2C) : Colors.white),
-                              shape: BoxShape.circle,
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: _isAnonymous
+                              ? const Color(0xFFFCE7F3)
+                              : (isDark ? const Color(0xFF1E293B) : const Color(0xFFEDE9FE)),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.theater_comedy_rounded,
+                          color: _isAnonymous ? const Color(0xFFDB2777) : const Color(0xFF7C3AED),
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Post Anonymously',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
                             ),
-                            child: Icon(
-                              Icons.theater_comedy_rounded,
-                              color: _isAnonymous ? const Color(0xFFDB2777) : const Color(0xFF94A3B8),
-                              size: 22,
+                            Text(
+                              'Your name and profile avatar will be masked.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Post Anonymously',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5),
-                                ),
-                                Text(
-                                  'Your name and profile will be hidden from everyone.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: _isAnonymous,
-                            activeThumbColor: const Color(0xFFEC4899),
-                            onChanged: (val) => setState(() => _isAnonymous = val),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: _isAnonymous,
+                        activeThumbColor: const Color(0xFF7C3AED),
+                        onChanged: (val) => setState(() => _isAnonymous = val),
                       ),
                     ],
                   ),

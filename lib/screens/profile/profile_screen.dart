@@ -32,6 +32,97 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     super.dispose();
   }
 
+  void _showEditProfileSheet(BuildContext context, dynamic user) {
+    final nameCtrl = TextEditingController(text: user.name);
+    final campusCtrl = TextEditingController(text: user.campusOrCity);
+    final bioCtrl = TextEditingController(text: user.majorOrBio ?? 'DDU Student');
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF151C2C) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Edit Profile',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameCtrl,
+              decoration: InputDecoration(
+                labelText: 'Full Name',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: campusCtrl,
+              decoration: InputDecoration(
+                labelText: 'Campus / Location',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: bioCtrl,
+              decoration: InputDecoration(
+                labelText: 'Major / Bio',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                context.read<AuthProvider>().updateProfile(
+                  name: nameCtrl.text.trim(),
+                  campusOrCity: campusCtrl.text.trim(),
+                  majorOrBio: bioCtrl.text.trim(),
+                );
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile updated successfully!')),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6D28D9),
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -91,8 +182,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final joinedCommunities = communityProvider.joinedCommunities;
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0B0F19) : const Color(0xFFFBFBFE),
       appBar: AppBar(
-        title: const Text('My Profile'),
+        backgroundColor: isDark ? const Color(0xFF0B0F19) : Colors.white,
+        elevation: 0,
+        title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
         actions: [
           IconButton(
             icon: Icon(themeProvider.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
@@ -226,7 +320,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+
+                        // Edit Profile Outline Button
+                        OutlinedButton.icon(
+                          onPressed: () => _showEditProfileSheet(context, user),
+                          icon: const Icon(Icons.edit_outlined, size: 16),
+                          label: const Text('Edit Profile & Bio'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF6D28D9),
+                            side: const BorderSide(color: Color(0xFFC4B5FD)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            minimumSize: const Size.fromHeight(36),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
 
                         // Progression Level Bar
                         Container(
