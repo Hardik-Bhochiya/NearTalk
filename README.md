@@ -198,16 +198,17 @@ neartalk/
 │
 ├── pubspec.yaml
 └── README.md
-🚀 Development Roadmap
-Phase 1 — Flutter UI
- Project setup
- Theme and reusable components
- Authentication UI
- Home screen
- Community screen
- Question screen
- Chat UI
- Profile UI
+## 🚀 Development Roadmap
+
+### Phase 1 — Flutter UI
+- [x] Project setup & Material 3 architecture
+- [x] Theme and reusable components (Cards, Badges, Chips, Vote Buttons)
+- [x] Authentication UI (Login, Sign-Up, Guest exploration)
+- [x] Home screen & Region Switcher
+- [x] Community discovery & Detail screen
+- [x] Question & Discussion screen (with Anonymous posting support)
+- [x] Real-time Chat UI & simulated interactions
+- [x] Profile UI with reputation badges & Dark/Light theme switch
 Phase 2 — Backend
  Node.js setup
  Express.js API

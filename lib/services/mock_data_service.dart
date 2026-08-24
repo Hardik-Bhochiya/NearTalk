@@ -1,0 +1,350 @@
+import 'package:uuid/uuid.dart';
+import '../models/user.dart';
+import '../models/region.dart';
+import '../models/community.dart';
+import '../models/question.dart';
+import '../models/reply.dart';
+import '../models/chat_message.dart';
+import '../models/chat_room.dart';
+import '../models/notification_item.dart';
+
+class MockDataService {
+  static const _uuid = Uuid();
+
+  static User currentUser = const User(
+    id: 'user-hardik',
+    name: 'Hardik',
+    email: 'hardik@ddu.ac.in',
+    campusOrCity: 'DDU, Nadiad, Gujarat',
+    majorOrBio: 'Computer Engineering (CE) | DDU 2026',
+    reputation: 240,
+    joinedCommunityIds: ['c1', 'c2', 'c3'],
+    badges: ['Community Contributor', 'Verified DDU Student', 'Top Answerer'],
+    isCollegeVerified: true,
+  );
+
+  static List<Region> initialRegions = [
+    const Region(
+      id: 'region-ddu',
+      name: 'DDU, Nadiad, Gujarat',
+      category: 'Campus',
+      description: 'Dharmsinh Desai University main campus & surrounding colleges.',
+      activeCommunitiesCount: 14,
+      activeMembersCount: 3800,
+      iconEmoji: '🎓',
+    ),
+    const Region(
+      id: 'region-nadiad',
+      name: 'Nadiad City & Station Road',
+      category: 'City',
+      description: 'Nadiad city center, food stalls, PG housing, and local transit.',
+      activeCommunitiesCount: 18,
+      activeMembersCount: 6500,
+      iconEmoji: '🏙️',
+    ),
+    const Region(
+      id: 'region-college-rd',
+      name: 'College Road & Hostel Area',
+      category: 'Locality',
+      description: 'Hostel zones, libraries, student dining, and stationary shops.',
+      activeCommunitiesCount: 9,
+      activeMembersCount: 2200,
+      iconEmoji: '🏘️',
+    ),
+  ];
+
+  static List<Community> initialCommunities = [
+    const Community(
+      id: 'c1',
+      name: 'DDU Students',
+      description: 'Official Community for all DDU students. Announcements, exams, syllabus & general campus queries.',
+      regionId: 'region-ddu',
+      regionName: 'DDU, Nadiad, Gujarat',
+      category: 'Official Community',
+      memberCount: 1200,
+      questionCount: 142,
+      iconEmoji: '🎓',
+      bannerColorHex: 0xFF6366F1, // Indigo
+      isJoined: true,
+      rules: [
+        'Be respectful and helpful to all DDU peers.',
+        'Keep discussions relevant to academics and campus life.',
+        'No ragging, hate speech, or exam cheating material.',
+      ],
+    ),
+    const Community(
+      id: 'c2',
+      name: 'DDU Hostel',
+      description: 'Life & Help for students staying in boys/girls hostels and nearby PGs.',
+      regionId: 'region-ddu',
+      regionName: 'DDU, Nadiad, Gujarat',
+      category: 'Life & Help',
+      memberCount: 340,
+      questionCount: 78,
+      iconEmoji: '🏠',
+      bannerColorHex: 0xFF10B981, // Green
+      isJoined: true,
+      rules: [
+        'Verified hostel and flatmate updates.',
+        'Respect hostel timings and privacy.',
+      ],
+    ),
+    const Community(
+      id: 'c3',
+      name: 'DDU Sports',
+      description: 'Play. Compete. Win. Cricket, volleyball, table tennis, badminton & annual sports meet.',
+      regionId: 'region-ddu',
+      regionName: 'DDU, Nadiad, Gujarat',
+      category: 'Play. Compete. Win.',
+      memberCount: 210,
+      questionCount: 45,
+      iconEmoji: '⚽',
+      bannerColorHex: 0xFFF97316, // Orange
+      isJoined: true,
+      rules: [
+        'Ground booking coordination.',
+        'Good sportsmanship at all times.',
+      ],
+    ),
+    const Community(
+      id: 'c4',
+      name: 'DDU ACM & Coding Club',
+      description: 'Competitive programming, web/app hackathons, and placement interview prep.',
+      regionId: 'region-ddu',
+      regionName: 'DDU, Nadiad, Gujarat',
+      category: 'Tech & Dev',
+      memberCount: 890,
+      questionCount: 110,
+      iconEmoji: '💻',
+      bannerColorHex: 0xFF8B5CF6,
+      isJoined: false,
+    ),
+    const Community(
+      id: 'c5',
+      name: 'DDU Canteens & Foodies',
+      description: 'Best lunch spots, tea/coffee stalls, street food reviews near campus.',
+      regionId: 'region-ddu',
+      regionName: 'DDU, Nadiad, Gujarat',
+      category: 'Food & Dining',
+      memberCount: 540,
+      questionCount: 62,
+      iconEmoji: '🍜',
+      bannerColorHex: 0xFFEC4899,
+      isJoined: false,
+    ),
+  ];
+
+  static List<Question> initialQuestions = [
+    Question(
+      id: 'q1',
+      title: 'Which canteen is best for lunch?',
+      content: 'Looking for good hygienic vegetarian lunch options near the engineering block or main gate.',
+      communityId: 'c1',
+      communityName: 'DDU Students',
+      regionId: 'region-ddu',
+      regionName: 'DDU, Nadiad, Gujarat',
+      authorId: 'u-anon-1',
+      authorName: 'Anonymous',
+      isAnonymous: true,
+      anonymousPseudonym: 'Anonymous',
+      tags: ['Canteen', 'Food', 'DDU'],
+      upvotes: 8,
+      views: 340,
+      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+      replies: [
+        Reply(
+          id: 'r1',
+          questionId: 'q1',
+          content: 'The canteen behind the library has fresh thali at ₹60, highly recommended!',
+          authorId: 'u-senior',
+          authorName: 'Senior Peer',
+          upvotes: 5,
+          createdAt: DateTime.now().subtract(const Duration(hours: 1, minutes: 20)),
+          isAccepted: true,
+        ),
+      ],
+      isUpvotedByMe: false,
+      isBookmarked: false,
+      isResolved: true,
+    ),
+    Question(
+      id: 'q2',
+      title: 'What are the sports facilities in DDU?',
+      content: 'Can first year students use the basketball court and gym in the evening? What are the registration steps?',
+      communityId: 'c3',
+      communityName: 'DDU Sports',
+      regionId: 'region-ddu',
+      regionName: 'DDU, Nadiad, Gujarat',
+      authorId: 'u-rahul',
+      authorName: 'Rahul',
+      authorBadge: 'Community Helper',
+      isAnonymous: false,
+      tags: ['Sports', 'Gym', 'Basketball'],
+      upvotes: 14,
+      views: 480,
+      createdAt: DateTime.now().subtract(const Duration(hours: 5)),
+      replies: [
+        Reply(
+          id: 'r2',
+          questionId: 'q2',
+          content: 'Yes! Basketball and volleyball grounds are open 4:30 PM to 7:00 PM. Just carry your DDU ID card.',
+          authorId: 'u-coach',
+          authorName: 'Sports Secretary',
+          upvotes: 9,
+          createdAt: DateTime.now().subtract(const Duration(hours: 3)),
+          isAccepted: true,
+        ),
+      ],
+      isUpvotedByMe: true,
+      isBookmarked: true,
+    ),
+    Question(
+      id: 'q3',
+      title: 'What are the important rules for first year students?',
+      content: 'Just joined DDU! What is the minimum attendance requirement and lab manual submission rules?',
+      communityId: 'c1',
+      communityName: 'DDU Students',
+      regionId: 'region-ddu',
+      regionName: 'DDU, Nadiad, Gujarat',
+      authorId: 'u-anon-2',
+      authorName: 'Anonymous',
+      isAnonymous: true,
+      anonymousPseudonym: 'Anonymous',
+      tags: ['FirstYear', 'Attendance', 'Academics'],
+      upvotes: 22,
+      views: 790,
+      createdAt: DateTime.now().subtract(const Duration(days: 1)),
+      replies: [
+        Reply(
+          id: 'r3',
+          questionId: 'q3',
+          content: 'Maintain at least 75% attendance strictly. Also make sure to get your lab files signed weekly to avoid midsem stress.',
+          authorId: 'u-ta',
+          authorName: 'Final Year Student',
+          upvotes: 16,
+          createdAt: DateTime.now().subtract(const Duration(hours: 20)),
+          isAccepted: true,
+        ),
+      ],
+      isUpvotedByMe: true,
+      isBookmarked: false,
+      isResolved: true,
+    ),
+  ];
+
+  static List<NotificationItem> initialNotifications = [
+    const NotificationItem(
+      id: 'n1',
+      title: 'DDU Students Announcement',
+      message: 'Mid-semester exam timetable has been released on the official portal.',
+      timeAgo: '15m ago',
+      type: 'announcement',
+      targetId: 'c1',
+      isRead: false,
+      iconEmoji: '📢',
+    ),
+    const NotificationItem(
+      id: 'n2',
+      title: 'Rahul replied to your question',
+      message: '"Yes, the basketball court is open from 4:30 PM today..."',
+      timeAgo: '1h ago',
+      type: 'reply',
+      targetId: 'q2',
+      isRead: false,
+      iconEmoji: '💬',
+    ),
+    const NotificationItem(
+      id: 'n3',
+      title: '8 students found your answer helpful',
+      message: 'Your reply on the canteen discussion received +8 helpful upvotes.',
+      timeAgo: '3h ago',
+      type: 'helpful',
+      targetId: 'q1',
+      isRead: false,
+      iconEmoji: '👍',
+    ),
+    const NotificationItem(
+      id: 'n4',
+      title: 'Welcome to DDU Hostel Community',
+      message: 'You have joined DDU Hostel. Connect with hostellers and seniors.',
+      timeAgo: '1d ago',
+      type: 'community',
+      targetId: 'c2',
+      isRead: true,
+      iconEmoji: '🏠',
+    ),
+  ];
+
+  static List<ChatRoom> initialChatRooms = [
+    ChatRoom(
+      id: 'room-c1',
+      title: 'DDU Students Official Chat',
+      subtitle: '1.2K members • Active now',
+      avatarEmoji: '🎓',
+      communityId: 'c1',
+      isGroup: true,
+      lastMessage: 'Tomorrow library is open till 8 PM for midsem prep.',
+      lastMessageTime: DateTime.now().subtract(const Duration(minutes: 8)),
+      unreadCount: 3,
+      isOnline: true,
+      participantIds: ['u-rahul', 'user-hardik'],
+    ),
+    ChatRoom(
+      id: 'room-c2',
+      title: 'DDU Hostel Group',
+      subtitle: '340 hostellers online',
+      avatarEmoji: '🏠',
+      communityId: 'c2',
+      isGroup: true,
+      lastMessage: 'Mess menu for dinner has been updated on notice board.',
+      lastMessageTime: DateTime.now().subtract(const Duration(minutes: 35)),
+      unreadCount: 0,
+      isOnline: true,
+      participantIds: ['user-hardik'],
+    ),
+    ChatRoom(
+      id: 'room-dm-rahul',
+      title: 'Rahul (Community Helper)',
+      subtitle: 'Active now',
+      avatarEmoji: '👨‍🎓',
+      isGroup: false,
+      lastMessage: 'Hey Hardik, are you coming to the basketball court today?',
+      lastMessageTime: DateTime.now().subtract(const Duration(minutes: 45)),
+      unreadCount: 1,
+      isOnline: true,
+      participantIds: ['u-rahul', 'user-hardik'],
+    ),
+  ];
+
+  static List<ChatMessage> initialMessages = [
+    ChatMessage(
+      id: 'm1',
+      roomId: 'room-c1',
+      senderId: 'u-rahul',
+      senderName: 'Rahul',
+      content: 'Hey everyone, what is the timetable for mid-sem exam?',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 20)),
+      isMine: false,
+    ),
+    ChatMessage(
+      id: 'm2',
+      roomId: 'room-c1',
+      senderId: 'user-hardik',
+      senderName: 'Hardik',
+      content: 'It was posted on the department notice board and student portal yesterday.',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 14)),
+      isMine: true,
+    ),
+    ChatMessage(
+      id: 'm3',
+      roomId: 'room-c1',
+      senderId: 'u-rahul',
+      senderName: 'Rahul',
+      content: 'Tomorrow library is open till 8 PM for midsem prep.',
+      timestamp: DateTime.now().subtract(const Duration(minutes: 8)),
+      isMine: false,
+    ),
+  ];
+
+  static String generateId() => _uuid.v4();
+}
