@@ -4,116 +4,66 @@ import '../models/chat_message.dart';
 import '../models/chat_room.dart';
 import '../models/user.dart';
 import '../services/mock_data_service.dart';
+import '../services/socket_service.dart';
+import '../services/api_service.dart';
 
 class ChatProvider extends ChangeNotifier {
   List<ChatRoom> _rooms = [];
-  final Map<String, List<ChatMessage>> _roomMessages = {};
-  final Map<String, bool> _typingIndicators = {};
+  final Map<String, List<ChatMessage>> _messages = {};
+  final Map<String, String?> _typingUser = {};
+  StreamSubscription<ChatMessage>? _messageSub;
+  StreamSubscription<Map<String, dynamic>>? _typingSub;
 
   List<ChatRoom> get rooms => _rooms;
+  String? getTypingUser(String roomId) => _typingUser[roomId];
+  bool isTyping(String roomId) => _typingUser[roomId] != null;
 
   ChatProvider() {
     _rooms = List.from(MockDataService.initialChatRooms);
-    for (var m in MockDataService.initialMessages) {
-      if (!_roomMessages.containsKey(m.roomId)) {
-        _roomMessages[m.roomId] = [];
+    _initChat();
+  }
+
+  void _initChat() {
+    SocketService().connect();
+
+    _messageSub = SocketService().onMessageReceived.listen((msg) {
+      if (!_messages.containsKey(msg.roomId)) {
+        _messages[msg.roomId] = [];
       }
-      _roomMessages[m.roomId]!.add(m);
-    }
-  }
+      _messages[msg.roomId]!.add(msg);
 
-  List<ChatMessage> getMessages(String roomId) {
-    return _roomMessages[roomId] ?? [];
-  }
-
-  bool isTyping(String roomId) => _typingIndicators[roomId] ?? false;
-
-  void markRoomAsRead(String roomId) {
-    final index = _rooms.indexWhere((r) => r.id == roomId);
-    if (index != -1 && _rooms[index].unreadCount > 0) {
-      _rooms[index] = _rooms[index].copyWith(unreadCount: 0);
-      notifyListeners();
-    }
-  }
-
-  void sendMessage({
-    required String roomId,
-    required String content,
-    required User currentUser,
-  }) {
-    final newMessage = ChatMessage(
-      id: MockDataService.generateId(),
-      roomId: roomId,
-      senderId: currentUser.id,
-      senderName: currentUser.name,
-      senderAvatar: currentUser.avatarUrl,
-      content: content,
-      timestamp: DateTime.now(),
-      isMine: true,
-    );
-
-    if (!_roomMessages.containsKey(roomId)) {
-      _roomMessages[roomId] = [];
-    }
-    _roomMessages[roomId]!.add(newMessage);
-
-    // Update room last message
-    final index = _rooms.indexWhere((r) => r.id == roomId);
-    if (index != -1) {
-      _rooms[index] = _rooms[index].copyWith(
-        lastMessage: content,
-        lastMessageTime: DateTime.now(),
-      );
-    }
-
-    notifyListeners();
-
-    // Trigger realistic auto-response simulation for testing
-    _simulateIncomingReply(roomId, content);
-  }
-
-  void _simulateIncomingReply(String roomId, String userMessage) {
-    _typingIndicators[roomId] = true;
-    notifyListeners();
-
-    Timer(const Duration(milliseconds: 1400), () {
-      _typingIndicators[roomId] = false;
-
-      final room = _rooms.firstWhere((r) => r.id == roomId, orElse: () => _rooms.first);
-      String replyText = 'Thanks for reaching out! Let me know if you need anything else on campus.';
-      String senderName = room.isGroup ? 'Campus Moderator' : room.title;
-      String senderId = 'sim-user-1';
-
-      if (userMessage.toLowerCase().contains('hi') || userMessage.toLowerCase().contains('hello')) {
-        replyText = 'Hey there! How is your semester going so far?';
-      } else if (userMessage.toLowerCase().contains('where') || userMessage.toLowerCase().contains('location')) {
-        replyText = 'It is located right near the South Quad, right across from the dining hall!';
-      } else if (userMessage.toLowerCase().contains('time') || userMessage.toLowerCase().contains('when')) {
-        replyText = 'Usually around 4:30 PM on weekdays.';
-      }
-
-      final autoMsg = ChatMessage(
-        id: MockDataService.generateId(),
-        roomId: roomId,
-        senderId: senderId,
-        senderName: senderName,
-        content: replyText,
-        timestamp: DateTime.now(),
-        isMine: false,
-      );
-
-      _roomMessages[roomId]?.add(autoMsg);
-
-      final rIndex = _rooms.indexWhere((r) => r.id == roomId);
-      if (rIndex != -1) {
-        _rooms[rIndex] = _rooms[rIndex].copyWith(
-          lastMessage: replyText,
-          lastMessageTime: DateTime.now(),
+      final index = _rooms.indexWhere((r) => r.id == msg.roomId);
+      if (index != -1) {
+        _rooms[index] = _rooms[index].copyWith(
+          lastMessage: msg.content,
+          lastMessageTime: msg.timestamp,
         );
       }
-
       notifyListeners();
     });
+
+    _typingSub = SocketService().onTypingStatus.listen((data) {
+      final roomId = data['roomId'] as String?;
+      final userName = data['userName'] as String?;
+      final isTypingStatus = data['isTyping'] as bool? ?? false;
+
+      if (roomId != null) {
+        _typingUser[roomId] = isTypingStatus ? userName : null;
+        notifyListeners();
+      }
+    });
+
+    _loadRoomsFromApi();
+  }
+
+  Future<void> _loadRoomsFromApi() async {
+    try {
+      final remoteRooms = await ApiService().getChatRooms();
+      if (remoteRooms.isNotEmpty) {
+        _rooms = remoteRooms;
+        notifyListeners();
+      }
+    } catch (_) {}
   }
 
   ChatRoom getOrCreateCommunityRoom(String communityId, String communityName, String iconEmoji) {
@@ -123,18 +73,107 @@ class ChatProvider extends ChangeNotifier {
         final newRoom = ChatRoom(
           id: 'room-$communityId',
           title: '$communityName Chat',
-          subtitle: 'Community Channel',
+          subtitle: 'Community discussion',
           avatarEmoji: iconEmoji,
           communityId: communityId,
           isGroup: true,
           lastMessage: 'Welcome to $communityName live chat!',
           lastMessageTime: DateTime.now(),
+          unreadCount: 0,
           isOnline: true,
+          participantIds: ['user-hardik'],
         );
         _rooms.insert(0, newRoom);
         return newRoom;
       },
     );
     return existing;
+  }
+
+  void markRoomAsRead(String roomId) {
+    final index = _rooms.indexWhere((r) => r.id == roomId);
+    if (index != -1 && _rooms[index].unreadCount > 0) {
+      _rooms[index] = _rooms[index].copyWith(unreadCount: 0);
+      notifyListeners();
+    }
+  }
+
+  List<ChatMessage> getMessages(String roomId) {
+    if (!_messages.containsKey(roomId)) {
+      _messages[roomId] = List.from(
+        MockDataService.initialMessages.where((m) => m.roomId == roomId),
+      );
+      ApiService().getMessages(roomId).then((msgs) {
+        if (msgs.isNotEmpty) {
+          _messages[roomId] = msgs;
+          notifyListeners();
+        }
+      });
+    }
+    return _messages[roomId] ?? [];
+  }
+
+  void joinRoom(String roomId, String userName) {
+    SocketService().joinRoom(roomId, userName);
+  }
+
+  void leaveRoom(String roomId, String userName) {
+    SocketService().leaveRoom(roomId, userName);
+  }
+
+  void startTyping(String roomId, String userName) {
+    SocketService().startTyping(roomId, userName);
+  }
+
+  void stopTyping(String roomId, String userName) {
+    SocketService().stopTyping(roomId, userName);
+  }
+
+  void sendMessage({
+    required String roomId,
+    required String content,
+    required User currentUser,
+    bool isAnonymous = false,
+  }) {
+    final newMsg = ChatMessage(
+      id: MockDataService.generateId(),
+      roomId: roomId,
+      senderId: currentUser.id,
+      senderName: isAnonymous ? 'Anonymous' : currentUser.name,
+      senderAvatar: isAnonymous ? null : currentUser.avatarUrl,
+      content: content,
+      timestamp: DateTime.now(),
+      isMine: true,
+      isAnonymous: isAnonymous,
+    );
+
+    if (!_messages.containsKey(roomId)) {
+      _messages[roomId] = [];
+    }
+    _messages[roomId]!.add(newMsg);
+
+    final index = _rooms.indexWhere((r) => r.id == roomId);
+    if (index != -1) {
+      _rooms[index] = _rooms[index].copyWith(
+        lastMessage: content,
+        lastMessageTime: DateTime.now(),
+      );
+    }
+    notifyListeners();
+
+    SocketService().sendMessage(
+      roomId: roomId,
+      content: content,
+      senderId: currentUser.id,
+      senderName: isAnonymous ? 'Anonymous' : currentUser.name,
+      isAnonymous: isAnonymous,
+    );
+  }
+
+  @override
+  void dispose() {
+    _messageSub?.cancel();
+    _typingSub?.cancel();
+    super.dispose();
   }
 }

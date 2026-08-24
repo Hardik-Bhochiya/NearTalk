@@ -4,17 +4,20 @@ import '../models/question.dart';
 import '../models/reply.dart';
 import '../models/user.dart';
 import '../services/mock_data_service.dart';
+import '../services/api_service.dart';
 
 class QuestionProvider extends ChangeNotifier {
   List<Question> _questions = [];
   String _selectedTag = 'All';
   String _searchQuery = '';
-  String _sortFilter = 'Recent'; // 'Recent', 'Most Helpful', 'Unanswered'
+  String _sortFilter = 'Recent';
+  bool _isLoading = false;
 
   List<Question> get questions => _questions;
   String get selectedTag => _selectedTag;
   String get searchQuery => _searchQuery;
   String get sortFilter => _sortFilter;
+  bool get isLoading => _isLoading;
 
   static const List<String> _anonymousAnimalAliases = [
     'Anonymous',
@@ -26,7 +29,20 @@ class QuestionProvider extends ChangeNotifier {
   ];
 
   QuestionProvider() {
+    _loadQuestions();
+  }
+
+  Future<void> _loadQuestions() async {
+    _isLoading = true;
     _questions = List.from(MockDataService.initialQuestions);
+    try {
+      final remoteQuestions = await ApiService().getQuestions();
+      if (remoteQuestions.isNotEmpty) {
+        _questions = remoteQuestions;
+      }
+    } catch (_) {}
+    _isLoading = false;
+    notifyListeners();
   }
 
   void selectTag(String tag) {
@@ -101,7 +117,7 @@ class QuestionProvider extends ChangeNotifier {
     }
   }
 
-  void askQuestion({
+  Future<void> askQuestion({
     required String title,
     required String content,
     required String communityId,
@@ -111,7 +127,7 @@ class QuestionProvider extends ChangeNotifier {
     required User user,
     required bool isAnonymous,
     required List<String> tags,
-  }) {
+  }) async {
     final pseudonym = isAnonymous
         ? _anonymousAnimalAliases[Random().nextInt(_anonymousAnimalAliases.length)]
         : null;
@@ -140,6 +156,21 @@ class QuestionProvider extends ChangeNotifier {
 
     _questions.insert(0, newQuestion);
     notifyListeners();
+
+    // Async sync with backend
+    try {
+      await ApiService().createQuestion(
+        title: title,
+        content: content,
+        communityId: communityId,
+        communityName: communityName,
+        regionId: regionId,
+        regionName: regionName,
+        user: user,
+        isAnonymous: isAnonymous,
+        tags: tags,
+      );
+    } catch (_) {}
   }
 
   void toggleUpvoteQuestion(String questionId) {
@@ -153,15 +184,17 @@ class QuestionProvider extends ChangeNotifier {
         upvotes: newCount < 0 ? 0 : newCount,
       );
       notifyListeners();
+
+      ApiService().toggleUpvote(questionId);
     }
   }
 
-  void addReply({
+  Future<void> addReply({
     required String questionId,
     required String content,
     required User user,
     required bool isAnonymous,
-  }) {
+  }) async {
     final index = _questions.indexWhere((q) => q.id == questionId);
     if (index != -1) {
       final q = _questions[index];
@@ -183,6 +216,13 @@ class QuestionProvider extends ChangeNotifier {
       final updatedReplies = List<Reply>.from(q.replies)..add(newReply);
       _questions[index] = q.copyWith(replies: updatedReplies);
       notifyListeners();
+
+      ApiService().addReply(
+        questionId: questionId,
+        content: content,
+        user: user,
+        isAnonymous: isAnonymous,
+      );
     }
   }
 
