@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/region.dart';
 import '../models/community.dart';
 import '../services/mock_data_service.dart';
+import '../services/local_store_service.dart';
+import '../services/api_service.dart';
 
 class CommunityProvider extends ChangeNotifier {
   List<Region> _regions = [];
@@ -12,15 +14,37 @@ class CommunityProvider extends ChangeNotifier {
 
   List<Region> get regions => _regions;
   List<Community> get communities => _communities;
+  List<Community> get allCommunities => _communities;
   Region? get selectedRegion => _selectedRegion;
   String get selectedCategory => _selectedCategory;
   String get searchQuery => _searchQuery;
 
   CommunityProvider() {
     _regions = List.from(MockDataService.initialRegions);
-    _communities = List.from(MockDataService.initialCommunities);
     if (_regions.isNotEmpty) {
       _selectedRegion = _regions.first;
+    }
+    _loadCommunities();
+  }
+
+  void _loadCommunities() {
+    _communities = LocalStoreService().getCommunities();
+    if (_communities.isEmpty) {
+      _communities = List.from(MockDataService.initialCommunities);
+    }
+    notifyListeners();
+
+    // Background check if server is available
+    if (ApiService().isServerReachable) {
+      ApiService().getCommunities().then((remote) {
+        if (remote.isNotEmpty) {
+          _communities = remote;
+          for (final c in remote) {
+            LocalStoreService().addCommunity(c);
+          }
+          notifyListeners();
+        }
+      });
     }
   }
 
@@ -73,32 +97,66 @@ class CommunityProvider extends ChangeNotifier {
         isJoined: newJoined,
         memberCount: newCount < 0 ? 0 : newCount,
       );
+      LocalStoreService().toggleJoinCommunity(communityId);
       notifyListeners();
     }
   }
 
-  void createCommunity({
+  Community createCommunity({
     required String name,
     required String description,
     required String category,
     required String iconEmoji,
     required int bannerColorHex,
+    String? regionId,
+    String? regionName,
+    String locationSpot = 'City / Campus Spot',
+    String creatorId = 'user-hardik',
+    List<String>? rules,
   }) {
+    final effectiveRegionId = regionId ?? _selectedRegion?.id ?? 'region-mumbai';
+    final effectiveRegionName = regionName ?? _selectedRegion?.name ?? 'Mumbai';
+
     final newCommunity = Community(
       id: MockDataService.generateId(),
       name: name,
       description: description,
-      regionId: _selectedRegion?.id ?? 'region-1',
-      regionName: _selectedRegion?.name ?? 'Silicon Valley Campus',
+      regionId: effectiveRegionId,
+      regionName: effectiveRegionName,
+      locationSpot: locationSpot,
+      creatorId: creatorId,
       category: category,
       memberCount: 1,
       questionCount: 0,
       iconEmoji: iconEmoji,
       bannerColorHex: bannerColorHex,
       isJoined: true,
+      rules: rules ?? [
+        '1. Respect all members',
+        '2. No spam or commercial promotions',
+        '3. No abusive language or harassment',
+        '4. Stay on topic and share relevant updates',
+      ],
     );
 
     _communities.insert(0, newCommunity);
+    LocalStoreService().addCommunity(newCommunity);
     notifyListeners();
+    return newCommunity;
+  }
+
+  bool deleteCommunity(String communityId, String currentUserId) {
+    final index = _communities.indexWhere((c) => c.id == communityId);
+    if (index != -1) {
+      final comm = _communities[index];
+      // Creator or admin permission check (WhatsApp-style group creator privilege)
+      if (comm.creatorId == currentUserId || currentUserId == 'user-hardik') {
+        _communities.removeAt(index);
+        LocalStoreService().deleteCommunity(communityId);
+        notifyListeners();
+        return true;
+      }
+    }
+    return false;
   }
 }

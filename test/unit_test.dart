@@ -3,7 +3,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:neartalk/providers/community_provider.dart';
 import 'package:neartalk/providers/question_provider.dart';
 import 'package:neartalk/providers/chat_provider.dart';
+import 'package:neartalk/providers/auth_provider.dart';
 import 'package:neartalk/providers/notification_provider.dart';
+import 'package:neartalk/models/user.dart';
 import 'package:neartalk/services/mock_data_service.dart';
 import 'package:neartalk/services/socket_service.dart';
 
@@ -14,17 +16,31 @@ void main() {
   });
 
   group('NearTalk Providers & Business Logic Tests', () {
-    test('CommunityProvider toggles join status', () {
+    test('CommunityProvider creates community with location spot and creator delete option', () {
       final provider = CommunityProvider();
-      final initialJoined = provider.joinedCommunities.length;
+      final initialCount = provider.allCommunities.length;
 
-      // Toggle c4 (which starts as not joined)
-      provider.toggleJoinCommunity('c4');
-      expect(provider.joinedCommunities.length, initialJoined + 1);
+      // Create a community with location spot
+      final comm = provider.createCommunity(
+        name: 'Mumbai Sports Club',
+        description: 'Sports and fitness activities in Mumbai',
+        regionId: 'region-mumbai',
+        regionName: 'Mumbai',
+        category: 'Sports',
+        iconEmoji: '⚽',
+        bannerColorHex: 0xFF238636,
+        locationSpot: 'Mumbai Grounds',
+        creatorId: MockDataService.currentUser.id,
+      );
 
-      // Toggle again to leave
-      provider.toggleJoinCommunity('c4');
-      expect(provider.joinedCommunities.length, initialJoined);
+      expect(provider.allCommunities.length, initialCount + 1);
+      expect(comm.locationSpot, 'Mumbai Grounds');
+      expect(comm.creatorId, MockDataService.currentUser.id);
+
+      // Creator deletes community (WhatsApp-style delete)
+      final deleted = provider.deleteCommunity(comm.id, MockDataService.currentUser.id);
+      expect(deleted, isTrue);
+      expect(provider.allCommunities.length, initialCount);
     });
 
     test('QuestionProvider adds anonymous question, upvotes and bookmarks', () {
@@ -34,13 +50,13 @@ void main() {
       qProvider.askQuestion(
         title: 'Where is the student recreation center in DDU?',
         content: 'Need to know where the indoor badminton courts are.',
-        communityId: 'c3',
-        communityName: 'DDU Sports',
-        regionId: 'region-ddu',
-        regionName: 'DDU, Nadiad, Gujarat',
+        communityId: 'c-sports',
+        communityName: 'DDU Sports & Fitness',
+        regionId: 'region-nadiad',
+        regionName: 'Nadiad',
         user: MockDataService.currentUser,
         isAnonymous: true,
-        tags: ['Sports', 'DDU'],
+        tags: ['Sports', 'Nadiad'],
       );
 
       expect(qProvider.questions.length, initialCount + 1);
@@ -57,27 +73,84 @@ void main() {
       expect(qProvider.getQuestionById(newQ.id)!.isBookmarked, isTrue);
     });
 
-    test('ChatProvider sends messages to rooms', () {
+    test('ChatProvider starts personal chat, edits message, and toggles like/dislike', () {
       final chatProvider = ChatProvider();
-      const roomId = 'room-c1';
-      final initialMsgs = chatProvider.getMessages(roomId).length;
+      const peer = User(
+        id: 'user-rahul',
+        username: 'rahul123',
+        name: 'Rahul Patel',
+        email: 'rahul@gmail.com',
+        campusOrCity: 'Dwarka',
+      );
 
+      // 1. Start Personal Chat by Username
+      final room = chatProvider.startPersonalChat(
+        peerUser: peer,
+        currentUser: MockDataService.currentUser,
+      );
+      expect(room.id, 'dm-hardik_07_rahul123');
+
+      // 2. Send Message with seen indicator
       chatProvider.sendMessage(
-        roomId: roomId,
-        content: 'Hello DDU community!',
+        roomId: room.id,
+        content: 'Hey Rahul, let us meet in Mumbai.',
         currentUser: MockDataService.currentUser,
       );
 
-      expect(chatProvider.getMessages(roomId).length, initialMsgs + 1);
-      expect(chatProvider.getMessages(roomId).last.content, 'Hello DDU community!');
+      final msgs = chatProvider.getMessages(room.id);
+      expect(msgs.length, 1);
+      final msg = msgs.first;
+      expect(msg.status, 'seen');
+
+      // 3. Edit Message
+      chatProvider.editMessage(room.id, msg.id, 'Hey Rahul, let us meet in Mumbai at 4 PM.');
+      final editedMsg = chatProvider.getMessages(room.id).first;
+      expect(editedMsg.content, 'Hey Rahul, let us meet in Mumbai at 4 PM.');
+      expect(editedMsg.isEdited, isTrue);
+
+      // 4. Like / Dislike reactions
+      chatProvider.toggleLikeMessage(room.id, msg.id, 'user-rahul');
+      expect(chatProvider.getMessages(room.id).first.likes, contains('user-rahul'));
+
+      chatProvider.toggleDislikeMessage(room.id, msg.id, 'user-rahul');
+      expect(chatProvider.getMessages(room.id).first.likes, isNot(contains('user-rahul')));
+      expect(chatProvider.getMessages(room.id).first.dislikes, contains('user-rahul'));
+
+      // 5. Delete Message for everyone
+      chatProvider.deleteMessage(room.id, msg.id, forEveryone: true);
+      expect(chatProvider.getMessages(room.id).first.isDeleted, isTrue);
     });
 
     test('NotificationProvider marks notifications as read', () {
       final notifProvider = NotificationProvider();
-      expect(notifProvider.unreadCount, greaterThan(0));
+      expect(notifProvider.unreadCount, 0);
+
+      notifProvider.addNotification(
+        title: 'Welcome',
+        message: 'Welcome to NearTalk!',
+        type: 'general',
+      );
+      expect(notifProvider.unreadCount, 1);
 
       notifProvider.markAllAsRead();
       expect(notifProvider.unreadCount, 0);
+    });
+
+    test('AuthProvider friend request lifecycle: send, pending status, and accept friendship', () async {
+      final auth = AuthProvider();
+
+      // Send friend request to devshah
+      final sent = await auth.sendFriendRequest('devshah');
+      expect(sent, isTrue);
+
+      final outgoing = auth.getPendingOutgoingRequests();
+      expect(outgoing.any((r) => r.receiverUsername == 'devshah'), isTrue);
+
+      // Accept request
+      final req = outgoing.firstWhere((r) => r.receiverUsername == 'devshah');
+      await auth.respondFriendRequest(req.id, 'accepted');
+
+      expect(auth.areFriends('devshah'), isTrue);
     });
   });
 }

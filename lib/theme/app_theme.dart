@@ -2,204 +2,106 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Brand Colors matching NearTalk UI
-  static const Color primaryColor = Color(0xFF6D28D9); // Vibrant Violet / Purple
-  static const Color primaryLight = Color(0xFF8B5CF6);
-  static const Color primaryDark = Color(0xFF4C1D95);
+  // Pure GitHub Dark Color Palette
+  static const Color githubBg = Color(0xFF0D1117);
+  static const Color githubCard = Color(0xFF161B22);
+  static const Color githubElevated = Color(0xFF21262D);
+  static const Color githubBorder = Color(0xFF30363D);
+  static const Color githubTextPrimary = Color(0xFFF0F6FC);
+  static const Color githubTextSecondary = Color(0xFF8B949E);
+  static const Color githubBlue = Color(0xFF58A6FF);
+  static const Color githubGreen = Color(0xFF238636);
+  static const Color githubGreenBright = Color(0xFF2EA043);
+  static const Color githubPurple = Color(0xFF8957E5);
+  static const Color githubRed = Color(0xFFDA3633);
+  static const Color githubOrange = Color(0xFFD29922);
 
-  static const Color secondaryColor = Color(0xFF059669); // Emerald Green
-  static const Color secondaryLight = Color(0xFF10B981);
+  // Brand aliases
+  static const Color primaryColor = githubBlue;
+  static const Color primaryLight = githubBlue;
+  static const Color secondaryColor = githubGreen;
+  static const Color accentOrange = githubOrange;
+  static const Color accentRose = githubRed;
 
-  static const Color accentOrange = Color(0xFFF97316);
-  static const Color accentAmber = Color(0xFFF59E0B);
-  static const Color accentRose = Color(0xFFF43F5E);
-
-  // Light Theme
-  static const Color lightBg = Color(0xFFF8FAFC);
-  static const Color lightCard = Color(0xFFFFFFFF);
-  static const Color lightBorder = Color(0xFFE2E8F0);
-  static const Color lightTextPrimary = Color(0xFF0F172A);
-  static const Color lightTextSecondary = Color(0xFF64748B);
-
-  // Dark Theme
-  static const Color darkBg = Color(0xFF0B0F19);
-  static const Color darkCard = Color(0xFF151C2C);
-  static const Color darkCardElevated = Color(0xFF1E293B);
-  static const Color darkBorder = Color(0xFF2E384D);
-  static const Color darkTextPrimary = Color(0xFFF8FAFC);
-  static const Color darkTextSecondary = Color(0xFF94A3B8);
-
-  static ThemeData get lightTheme {
-    final base = ThemeData.light(useMaterial3: true);
-    return base.copyWith(
-      scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-      primaryColor: primaryColor,
-      colorScheme: const ColorScheme.light(
-        primary: primaryColor,
-        secondary: secondaryColor,
-        surface: Colors.white,
-        error: accentRose,
-        onPrimary: Colors.white,
-        onSecondary: Colors.white,
-        onSurface: lightTextPrimary,
-      ),
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
-        displayLarge: GoogleFonts.outfit(
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-          color: lightTextPrimary,
-        ),
-        titleLarge: GoogleFonts.outfit(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: lightTextPrimary,
-        ),
-        titleMedium: GoogleFonts.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: lightTextPrimary,
-        ),
-        bodyLarge: GoogleFonts.inter(
-          fontSize: 14.5,
-          color: lightTextPrimary,
-          height: 1.45,
-        ),
-        bodyMedium: GoogleFonts.inter(
-          fontSize: 13,
-          color: lightTextSecondary,
-          height: 1.4,
-        ),
-      ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 0.5,
-        centerTitle: false,
-        iconTheme: const IconThemeData(color: lightTextPrimary),
-        titleTextStyle: GoogleFonts.outfit(
-          color: lightTextPrimary,
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      cardTheme: CardThemeData(
-        color: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFFF1F5F9), width: 1.2),
-        ),
-        margin: EdgeInsets.zero,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          textStyle: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        hintStyle: GoogleFonts.inter(
-          color: const Color(0xFF94A3B8),
-          fontSize: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: lightBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: lightBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: primaryColor, width: 1.5),
-        ),
-      ),
-    );
-  }
+  static const Color darkBg = githubBg;
+  static const Color darkCard = githubCard;
+  static const Color darkCardElevated = githubElevated;
+  static const Color darkBorder = githubBorder;
+  static const Color darkTextPrimary = githubTextPrimary;
+  static const Color darkTextSecondary = githubTextSecondary;
 
   static ThemeData get darkTheme {
     final base = ThemeData.dark(useMaterial3: true);
     return base.copyWith(
-      scaffoldBackgroundColor: darkBg,
-      primaryColor: primaryLight,
+      scaffoldBackgroundColor: githubBg,
+      primaryColor: githubBlue,
+      canvasColor: githubBg,
       colorScheme: const ColorScheme.dark(
-        primary: primaryLight,
-        secondary: secondaryLight,
-        surface: darkCard,
-        error: accentRose,
+        primary: githubBlue,
+        secondary: githubGreen,
+        surface: githubCard,
+        error: githubRed,
         onPrimary: Colors.white,
         onSecondary: Colors.white,
-        onSurface: darkTextPrimary,
+        onSurface: githubTextPrimary,
       ),
       textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
-        displayLarge: GoogleFonts.outfit(
+        displayLarge: GoogleFonts.inter(
           fontSize: 28,
           fontWeight: FontWeight.w800,
-          color: darkTextPrimary,
+          color: githubTextPrimary,
         ),
-        titleLarge: GoogleFonts.outfit(
+        titleLarge: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.w700,
-          color: darkTextPrimary,
+          color: githubTextPrimary,
         ),
         titleMedium: GoogleFonts.inter(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: darkTextPrimary,
+          color: githubTextPrimary,
         ),
         bodyLarge: GoogleFonts.inter(
           fontSize: 14.5,
-          color: darkTextPrimary,
+          color: githubTextPrimary,
           height: 1.45,
         ),
         bodyMedium: GoogleFonts.inter(
           fontSize: 13,
-          color: darkTextSecondary,
+          color: githubTextSecondary,
           height: 1.4,
         ),
       ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: darkBg,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: githubBg,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         centerTitle: false,
-        iconTheme: const IconThemeData(color: darkTextPrimary),
-        titleTextStyle: GoogleFonts.outfit(
-          color: darkTextPrimary,
-          fontSize: 22,
+        iconTheme: IconThemeData(color: githubTextPrimary),
+        titleTextStyle: TextStyle(
+          color: githubTextPrimary,
+          fontSize: 20,
           fontWeight: FontWeight.w800,
         ),
       ),
       cardTheme: CardThemeData(
-        color: darkCard,
+        color: githubCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: darkBorder, width: 1.2),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: githubBorder, width: 1.2),
         ),
         margin: EdgeInsets.zero,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryLight,
+          backgroundColor: githubGreen,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: Color(0x33FFFFFF), width: 1),
           ),
           textStyle: GoogleFonts.inter(
             fontSize: 14,
@@ -207,27 +109,47 @@ class AppTheme {
           ),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: githubTextPrimary,
+          backgroundColor: githubElevated,
+          side: const BorderSide(color: githubBorder, width: 1.2),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: darkCardElevated,
+        fillColor: githubElevated,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         hintStyle: GoogleFonts.inter(
-          color: const Color(0xFF64748B),
+          color: githubTextSecondary,
+          fontSize: 14,
+        ),
+        labelStyle: GoogleFonts.inter(
+          color: githubTextSecondary,
           fontSize: 14,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: darkBorder),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: githubBorder),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: darkBorder),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: githubBorder),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: primaryLight, width: 1.5),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: githubBlue, width: 1.8),
         ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: githubBorder,
+        thickness: 1,
       ),
     );
   }
+
+  // Pure GitHub Dark enforced - no light theme!
+  static ThemeData get lightTheme => darkTheme;
 }

@@ -3,7 +3,6 @@ import 'home/home_screen.dart';
 import 'community/communities_screen.dart';
 import 'chat/chat_list_screen.dart';
 import 'profile/profile_screen.dart';
-import 'question/ask_question_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
@@ -18,47 +17,39 @@ class _MainNavScreenState extends State<MainNavScreen> {
   final List<Widget> _screens = const [
     HomeScreen(),
     CommunitiesScreen(),
-    SizedBox.shrink(), // Placeholder for center Ask button
     ChatListScreen(),
     ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const activeColor = Color(0xFF6D28D9);
-    const inactiveColor = Color(0xFF94A3B8);
+    const activeColor = Color(0xFF58A6FF); // GitHub Blue
+    const inactiveColor = Color(0xFF8B949E); // GitHub Muted Gray
 
     return Scaffold(
       body: IndexedStack(
-        index: _currentIndex == 2 ? 0 : _currentIndex,
+        index: _currentIndex,
         children: _screens,
       ),
       bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF101624) : Colors.white,
+        decoration: const BoxDecoration(
+          color: Color(0xFF161B22),
           border: Border(
             top: BorderSide(
-              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              color: Color(0xFF30363D),
               width: 1,
             ),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
         ),
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: SafeArea(
           child: Row(
             children: [
               // 1. Home
               Expanded(
                 child: _buildNavItem(
-                  icon: Icons.home_rounded,
+                  icon: Icons.home_outlined,
+                  selectedIcon: Icons.home_rounded,
                   label: 'Home',
                   isSelected: _currentIndex == 0,
                   onTap: () => setState(() => _currentIndex = 0),
@@ -78,73 +69,26 @@ class _MainNavScreenState extends State<MainNavScreen> {
                   inactiveColor: inactiveColor,
                 ),
               ),
-              // 3. Center Elevated Ask Button
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        fullscreenDialog: true,
-                        builder: (_) => const AskQuestionScreen(),
-                      ),
-                    );
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0x667C3AED),
-                              blurRadius: 6,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.add, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(height: 2),
-                      const Text(
-                        'Ask',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.bold,
-                          color: activeColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // 4. Chats
+              // 3. Chats (Personal + Groups)
               Expanded(
                 child: _buildNavItem(
                   icon: Icons.chat_bubble_outline_rounded,
                   selectedIcon: Icons.chat_bubble_rounded,
-                  label: 'Chats',
-                  isSelected: _currentIndex == 3,
-                  onTap: () => setState(() => _currentIndex = 3),
+                  label: 'Chat',
+                  isSelected: _currentIndex == 2,
+                  onTap: () => setState(() => _currentIndex = 2),
                   activeColor: activeColor,
                   inactiveColor: inactiveColor,
                 ),
               ),
-              // 5. Profile
+              // 4. Profile
               Expanded(
                 child: _buildNavItem(
                   icon: Icons.person_outline_rounded,
                   selectedIcon: Icons.person_rounded,
                   label: 'Profile',
-                  isSelected: _currentIndex == 4,
-                  onTap: () => setState(() => _currentIndex = 4),
+                  isSelected: _currentIndex == 3,
+                  onTap: () => setState(() => _currentIndex = 3),
                   activeColor: activeColor,
                   inactiveColor: inactiveColor,
                 ),
@@ -178,13 +122,13 @@ class _MainNavScreenState extends State<MainNavScreen> {
               size: 22,
               color: isSelected ? activeColor : inactiveColor,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 10.5,
+                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? activeColor : inactiveColor,
               ),

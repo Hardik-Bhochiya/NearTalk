@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/community.dart';
+import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/theme_provider.dart';
 import '../../providers/community_provider.dart';
 import '../../providers/question_provider.dart';
+import '../../providers/chat_provider.dart';
 import '../../widgets/question_card.dart';
-import '../../widgets/community_card.dart';
 import '../community/community_detail_screen.dart';
 import '../question/question_detail_screen.dart';
 import '../auth/login_screen.dart';
+import '../chat/chat_conversation_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -32,104 +34,192 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     super.dispose();
   }
 
-  void _showEditProfileSheet(BuildContext context, dynamic user) {
+  void _showEditProfileSheet(BuildContext context, User user) {
     final nameCtrl = TextEditingController(text: user.name);
     final campusCtrl = TextEditingController(text: user.campusOrCity);
-    final bioCtrl = TextEditingController(text: user.majorOrBio ?? 'DDU Student');
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bioCtrl = TextEditingController(text: user.majorOrBio ?? 'Tech & Community Builder');
+    String selectedAvatar = user.avatarUrl ?? '🎓';
+    final availableAvatars = ['🎓', '💻', '⚽', '🚀', '⚡', '🦁', '🦉', '🎨', '🔥', '🌟', '📚', '🌊'];
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        ),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF151C2C) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                  borderRadius: BorderRadius.circular(2),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: Color(0xFF161B22),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: Color(0xFF30363D), width: 1.5)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF30363D),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Edit Profile',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameCtrl,
-              decoration: InputDecoration(
-                labelText: 'Full Name',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              const SizedBox(height: 16),
+              const Text(
+                'Edit Profile',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
               ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: campusCtrl,
-              decoration: InputDecoration(
-                labelText: 'Campus / Location',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              const SizedBox(height: 14),
+
+              // Avatar Picker
+              const Text(
+                'Choose Profile Picture',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF8B949E)),
               ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: bioCtrl,
-              decoration: InputDecoration(
-                labelText: 'Major / Bio',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 52,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: availableAvatars.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final av = availableAvatars[index];
+                    final isSel = selectedAvatar == av;
+                    return InkWell(
+                      onTap: () => setSheetState(() => selectedAvatar = av),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: isSel ? const Color(0xFF21262D) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isSel ? const Color(0xFF58A6FF) : const Color(0xFF30363D),
+                            width: 2,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(av, style: const TextStyle(fontSize: 24)),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                context.read<AuthProvider>().updateProfile(
-                  name: nameCtrl.text.trim(),
-                  campusOrCity: campusCtrl.text.trim(),
-                  majorOrBio: bioCtrl.text.trim(),
-                );
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Profile updated successfully!')),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6D28D9),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              const SizedBox(height: 16),
+
+              TextField(
+                controller: nameCtrl,
+                style: const TextStyle(color: Color(0xFFF0F6FC)),
+                decoration: InputDecoration(
+                  labelText: 'Full Name',
+                  labelStyle: const TextStyle(color: Color(0xFF8B949E)),
+                  filled: true,
+                  fillColor: const Color(0xFF0D1117),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF30363D))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF30363D))),
+                ),
               ),
-              child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: campusCtrl,
+                style: const TextStyle(color: Color(0xFFF0F6FC)),
+                decoration: InputDecoration(
+                  labelText: 'Location / City',
+                  labelStyle: const TextStyle(color: Color(0xFF8B949E)),
+                  filled: true,
+                  fillColor: const Color(0xFF0D1117),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF30363D))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF30363D))),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: bioCtrl,
+                style: const TextStyle(color: Color(0xFFF0F6FC)),
+                decoration: InputDecoration(
+                  labelText: 'Bio',
+                  labelStyle: const TextStyle(color: Color(0xFF8B949E)),
+                  filled: true,
+                  fillColor: const Color(0xFF0D1117),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF30363D))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF30363D))),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  context.read<AuthProvider>().updateProfile(
+                    name: nameCtrl.text.trim(),
+                    campusOrCity: campusCtrl.text.trim(),
+                    majorOrBio: bioCtrl.text.trim(),
+                    avatarUrl: selectedAvatar,
+                  );
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Profile updated successfully!'),
+                      backgroundColor: Color(0xFF238636),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF238636),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(46),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context, AuthProvider auth) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF161B22),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFF30363D))),
+        title: const Text('Log Out', style: TextStyle(color: Color(0xFFF0F6FC), fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to log out of NearTalk?', style: TextStyle(color: Color(0xFF8B949E))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF8B949E))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              auth.logout();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF85149), foregroundColor: Colors.white),
+            child: const Text('Log Out'),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     final auth = context.watch<AuthProvider>();
-    final themeProvider = context.watch<ThemeProvider>();
     final communityProvider = context.watch<CommunityProvider>();
     final questionProvider = context.watch<QuestionProvider>();
 
@@ -137,27 +227,29 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
     if (user == null || auth.isGuest) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Profile')),
+        backgroundColor: const Color(0xFF0D1117),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF0D1117),
+          elevation: 0,
+          title: const Text('Profile', style: TextStyle(color: Color(0xFFF0F6FC), fontWeight: FontWeight.bold)),
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.account_circle_outlined, size: 72, color: Color(0xFF94A3B8)),
+                const Icon(Icons.account_circle_outlined, size: 72, color: Color(0xFF8B949E)),
                 const SizedBox(height: 16),
                 const Text(
                   'Exploring as Guest',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Create an account or sign in with your college email to post, build reputation, and chat with community members.',
+                const Text(
+                  'Sign in with your @username to connect with friends, join communities, and chat.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  ),
+                  style: TextStyle(fontSize: 14, color: Color(0xFF8B949E)),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
@@ -169,6 +261,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   },
                   icon: const Icon(Icons.login_rounded),
                   label: const Text('Sign In / Register'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF238636),
+                    foregroundColor: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -178,46 +274,23 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     }
 
     final userQuestions = questionProvider.getUserQuestions(user.id);
-    final bookmarkedQuestions = questionProvider.bookmarkedQuestions;
     final joinedCommunities = communityProvider.joinedCommunities;
+    final friends = auth.getFriends();
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0B0F19) : const Color(0xFFFBFBFE),
+      backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF0B0F19) : Colors.white,
+        backgroundColor: const Color(0xFF0D1117),
         elevation: 0,
-        title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+        title: Text(
+          user.handle,
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFFF0F6FC)),
+        ),
         actions: [
           IconButton(
-            icon: Icon(themeProvider.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-            tooltip: 'Toggle Dark / Light Theme',
-            onPressed: () => themeProvider.toggleTheme(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(Icons.logout_rounded, color: Color(0xFFF85149)),
             tooltip: 'Log Out',
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Log Out'),
-                  content: const Text('Are you sure you want to log out of NearTalk?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        auth.logout();
-                      },
-                      child: const Text('Log Out', style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
-              );
-            },
+            onPressed: () => _confirmLogout(context, auth),
           ),
           const SizedBox(width: 8),
         ],
@@ -228,200 +301,118 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Profile Card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF151C2C) : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0),
+                  // Instagram Profile Header Row (Avatar + Stats)
+                  Row(
+                    children: [
+                      // Avatar
+                      Stack(
+                        children: [
+                          InkWell(
+                            onTap: () => _showEditProfileSheet(context, user),
+                            borderRadius: BorderRadius.circular(44),
+                            child: Container(
+                              width: 76,
+                              height: 76,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF21262D),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0xFF58A6FF), width: 2),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(user.avatarUrl ?? '🎓', style: const TextStyle(fontSize: 36)),
+                            ),
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF58A6FF),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.edit, color: Colors.white, size: 12),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 32,
-                              backgroundColor: const Color(0xFFEDE9FE),
-                              child: Text(
-                                user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-                                style: const TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF6D28D9),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          user.name,
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      if (user.isCollegeVerified)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFEEF2FF),
-                                            borderRadius: BorderRadius.circular(10),
-                                            border: Border.all(color: const Color(0xFFC7D2FE)),
-                                          ),
-                                          child: const Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.verified_rounded, size: 13, color: Color(0xFF4F46E5)),
-                                              SizedBox(width: 3),
-                                              Text(
-                                                'Verified',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFF4F46E5),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    user.campusOrCity,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                  if (user.majorOrBio != null) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      user.majorOrBio!,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
+                      const SizedBox(width: 20),
 
-                        // Edit Profile Outline Button
-                        OutlinedButton.icon(
-                          onPressed: () => _showEditProfileSheet(context, user),
-                          icon: const Icon(Icons.edit_outlined, size: 16),
-                          label: const Text('Edit Profile & Bio'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF6D28D9),
-                            side: const BorderSide(color: Color(0xFFC4B5FD)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            minimumSize: const Size.fromHeight(36),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Progression Level Bar
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: const [
-                                  Text(
-                                    'Level 3: Campus Contributor',
-                                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
-                                  ),
-                                  Text(
-                                    '240 / 500 XP',
-                                    style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: const LinearProgressIndicator(
-                                  value: 0.48,
-                                  backgroundColor: Color(0xFFE2E8F0),
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
-                                  minHeight: 6,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Stats Row
-                        Row(
+                      // Instagram Stats Row: Friends | Communities | Posts
+                      Expanded(
+                        child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildStatItem('Reputation', '${user.reputation} pts', Icons.military_tech_rounded, const Color(0xFFF59E0B)),
-                            _buildStatItem('Questions', '${userQuestions.length}', Icons.question_answer_rounded, const Color(0xFF6D28D9)),
-                            _buildStatItem('Bookmarks', '${bookmarkedQuestions.length}', Icons.bookmark_rounded, const Color(0xFFEC4899)),
-                            _buildStatItem('Communities', '${joinedCommunities.length}', Icons.groups_rounded, const Color(0xFF059669)),
+                            _buildStatColumn('Friends', '${friends.length}', () => _tabController.animateTo(1)),
+                            _buildStatColumn('Communities', '${joinedCommunities.length}', () => _tabController.animateTo(0)),
+                            _buildStatColumn('Posts', '${userQuestions.length}', () => _tabController.animateTo(2)),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Badges Wrap
-                  const Row(
-                    children: [
-                      Icon(Icons.workspace_premium_outlined, size: 16, color: Color(0xFFF59E0B)),
-                      SizedBox(width: 6),
-                      Text(
-                        'Community Badges',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: user.badges.map((b) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFFDE68A)),
-                        ),
-                        child: Text(
-                          '⭐ $b',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFB45309),
+                  const SizedBox(height: 14),
+
+                  // Display Name & Location
+                  Text(
+                    user.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFF0F6FC),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      const Icon(Icons.place_rounded, size: 14, color: Color(0xFF58A6FF)),
+                      const SizedBox(width: 4),
+                      Text(
+                        user.campusOrCity,
+                        style: const TextStyle(fontSize: 12.5, color: Color(0xFF8B949E), fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                  if (user.majorOrBio != null && user.majorOrBio!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      user.majorOrBio!,
+                      style: const TextStyle(fontSize: 12.5, color: Color(0xFFF0F6FC), height: 1.3),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+
+                  // Action Buttons: [ Edit Profile ] and [ Log Out ]
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _showEditProfileSheet(context, user),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFFF0F6FC),
+                            backgroundColor: const Color(0xFF21262D),
+                            side: const BorderSide(color: Color(0xFF30363D)),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
+                          child: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         ),
-                      );
-                    }).toList(),
+                      ),
+                      const SizedBox(width: 10),
+                      OutlinedButton.icon(
+                        onPressed: () => _confirmLogout(context, auth),
+                        icon: const Icon(Icons.logout_rounded, size: 15, color: Color(0xFFF85149)),
+                        label: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFF85149))),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: const Color(0xFF21262D),
+                          side: const BorderSide(color: Color(0xFF30363D)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -429,28 +420,111 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
           SliverPersistentHeader(
             pinned: true,
-            delegate: _SliverAppBarDelegate(
+            delegate: _ProfileTabBarDelegate(
               TabBar(
                 controller: _tabController,
-                indicatorColor: const Color(0xFF6D28D9),
-                labelColor: const Color(0xFF6D28D9),
-                unselectedLabelColor: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                indicatorColor: const Color(0xFF58A6FF),
+                labelColor: const Color(0xFF58A6FF),
+                unselectedLabelColor: const Color(0xFF8B949E),
                 tabs: [
-                  Tab(text: 'My Posts (${userQuestions.length})'),
-                  Tab(text: 'Saved (${bookmarkedQuestions.length})'),
-                  Tab(text: 'Joined (${joinedCommunities.length})'),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.groups_rounded, size: 16),
+                        const SizedBox(width: 4),
+                        Text('Communities (${joinedCommunities.length})'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.people_rounded, size: 16),
+                        const SizedBox(width: 4),
+                        Text('Friends (${friends.length})'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.question_answer_rounded, size: 16),
+                        const SizedBox(width: 4),
+                        Text('Posts (${userQuestions.length})'),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-              isDark ? const Color(0xFF0B0F19) : const Color(0xFFF8FAFC),
+              const Color(0xFF0D1117),
             ),
           ),
         ],
         body: TabBarView(
           controller: _tabController,
           children: [
-            // Tab 1: User's Questions
+            // Tab 1: My Communities List (💻 Mumbai Developers, 📚 DDU Students, etc.)
+            joinedCommunities.isEmpty
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('No joined communities yet', style: TextStyle(color: Color(0xFF8B949E))),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: joinedCommunities.length,
+                    itemBuilder: (context, index) {
+                      final c = joinedCommunities[index];
+                      return _buildCommunityItem(c);
+                    },
+                  ),
+
+            // Tab 2: Friends List with 1-Tap [ Chat ] Buttons
+            friends.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.people_outline_rounded, size: 40, color: Color(0xFF8B949E)),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No Friends Added Yet',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Search users by @username on the Home screen to connect!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12.5, color: Color(0xFF8B949E)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: friends.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final friend = friends[index];
+                      return _buildFriendItem(friend, auth);
+                    },
+                  ),
+
+            // Tab 3: User Questions / Posts
             userQuestions.isEmpty
-                ? const Center(child: Text('You haven\'t asked any questions yet'))
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('You haven\'t posted any questions yet', style: TextStyle(color: Color(0xFF8B949E))),
+                    ),
+                  )
                 : ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: userQuestions.length,
@@ -469,90 +543,163 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       );
                     },
                   ),
-
-            // Tab 2: Saved / Bookmarked Questions
-            bookmarkedQuestions.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.bookmark_border_rounded, size: 48, color: Color(0xFF94A3B8)),
-                        SizedBox(height: 10),
-                        Text('No saved bookmarks yet', style: TextStyle(fontWeight: FontWeight.bold)),
-                        SizedBox(height: 4),
-                        Text('Tap the 3-dots on any question to bookmark it for later.', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: bookmarkedQuestions.length,
-                    itemBuilder: (context, index) {
-                      final q = bookmarkedQuestions[index];
-                      return QuestionCard(
-                        question: q,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => QuestionDetailScreen(questionId: q.id),
-                            ),
-                          );
-                        },
-                        onUpvote: () => questionProvider.toggleUpvoteQuestion(q.id),
-                      );
-                    },
-                  ),
-
-            // Tab 3: Joined Communities
-            joinedCommunities.isEmpty
-                ? const Center(child: Text('You haven\'t joined any communities'))
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: joinedCommunities.length,
-                    itemBuilder: (context, index) {
-                      final c = joinedCommunities[index];
-                      return CommunityCard(
-                        community: c,
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => CommunityDetailScreen(communityId: c.id),
-                            ),
-                          );
-                        },
-                        onJoinToggle: () => communityProvider.toggleJoinCommunity(c.id),
-                      );
-                    },
-                  ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
-    return Column(
+  Widget _buildCommunityItem(Community c) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF30363D)),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => CommunityDetailScreen(communityId: c.id),
+            ),
+          );
+        },
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Color(c.bannerColorHex),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(c.iconEmoji, style: const TextStyle(fontSize: 20)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    c.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFF0F6FC),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '📍 ${c.regionName} • ${c.memberCount} members',
+                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF8B949E)),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF8B949E)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFriendItem(User friend, AuthProvider auth) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF30363D)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: const Color(0xFF21262D),
+            child: Text(friend.avatarUrl ?? '👤', style: const TextStyle(fontSize: 18)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  friend.name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFF0F6FC),
+                  ),
+                ),
+                Text(
+                  friend.handle,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF58A6FF)),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF238636),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.chat_bubble_rounded, size: 14),
+            label: const Text('Chat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            onPressed: () {
+              final chatProvider = context.read<ChatProvider>();
+              final room = chatProvider.startPersonalChat(
+                peerUser: friend,
+                currentUser: auth.currentUser!,
+              );
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ChatConversationScreen(roomId: room.id)),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatColumn(String label, String value, VoidCallback? onTap) {
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
         ),
+        const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
+          style: const TextStyle(fontSize: 11.5, color: Color(0xFF8B949E)),
         ),
       ],
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: content,
+        ),
+      );
+    }
+    return content;
   }
 }
 
-class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+class _ProfileTabBarDelegate extends SliverPersistentHeaderDelegate {
   final TabBar _tabBar;
   final Color _bgColor;
 
-  _SliverAppBarDelegate(this._tabBar, this._bgColor);
+  _ProfileTabBarDelegate(this._tabBar, this._bgColor);
 
   @override
   double get minExtent => _tabBar.preferredSize.height;
@@ -568,7 +715,5 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
-    return false;
-  }
+  bool shouldRebuild(_ProfileTabBarDelegate oldDelegate) => false;
 }

@@ -78,11 +78,13 @@ class RegionSelectorSheet extends StatelessWidget {
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
-              child: ListTile(
-                onTap: () {
-                  communityProvider.selectRegion(region);
-                  Navigator.pop(context);
-                },
+              child: Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  onTap: () {
+                    communityProvider.selectRegion(region);
+                    Navigator.pop(context);
+                  },
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 leading: Container(
                   width: 44,
@@ -115,7 +117,8 @@ class RegionSelectorSheet extends StatelessWidget {
                     ? Icon(Icons.check_circle_rounded, color: theme.primaryColor)
                     : null,
               ),
-            );
+            ),
+          );
           }),
         ],
       ),

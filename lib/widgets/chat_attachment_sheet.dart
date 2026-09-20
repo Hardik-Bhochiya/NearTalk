@@ -15,23 +15,22 @@ class ChatAttachmentSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final items = [
-      {'icon': Icons.image_rounded, 'color': const Color(0xFF8B5CF6), 'title': 'Photo / Image', 'type': 'photo'},
-      {'icon': Icons.camera_alt_rounded, 'color': const Color(0xFFEC4899), 'title': 'Camera', 'type': 'camera'},
-      {'icon': Icons.description_rounded, 'color': const Color(0xFF3B82F6), 'title': 'Document / Notes', 'type': 'document'},
-      {'icon': Icons.location_on_rounded, 'color': const Color(0xFF10B981), 'title': 'Campus Location', 'type': 'location'},
-      {'icon': Icons.poll_rounded, 'color': const Color(0xFFF59E0B), 'title': 'Campus Poll', 'type': 'poll'},
-      {'icon': Icons.mic_rounded, 'color': const Color(0xFF6366F1), 'title': 'Audio Note', 'type': 'audio'},
+      {'icon': Icons.image_rounded, 'color': const Color(0xFF58A6FF), 'title': 'Photo / Image', 'type': 'photo'},
+      {'icon': Icons.camera_alt_rounded, 'color': const Color(0xFFBC8CFF), 'title': 'Camera', 'type': 'camera'},
+      {'icon': Icons.description_rounded, 'color': const Color(0xFF388BFD), 'title': 'Document / Notes', 'type': 'document'},
+      {'icon': Icons.location_on_rounded, 'color': const Color(0xFF238636), 'title': 'Campus Location', 'type': 'location'},
+      {'icon': Icons.poll_rounded, 'color': const Color(0xFFD29922), 'title': 'Campus Poll', 'type': 'poll'},
+      {'icon': Icons.mic_rounded, 'color': const Color(0xFF79C0FF), 'title': 'Audio Note', 'type': 'audio'},
     ];
 
     return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF151C2C) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: const BoxDecoration(
+        color: Color(0xFF161B22),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(top: BorderSide(color: Color(0xFF30363D))),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -39,21 +38,21 @@ class ChatAttachmentSheet extends StatelessWidget {
           children: [
             Center(
               child: Container(
-                width: 40,
+                width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  color: const Color(0xFF30363D),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
+            const SizedBox(height: 14),
+            const Text(
               'Share Content',
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFF0F6FC),
               ),
             ),
             const SizedBox(height: 16),
@@ -62,8 +61,8 @@ class ChatAttachmentSheet extends StatelessWidget {
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
                 childAspectRatio: 1.05,
               ),
               itemCount: items.length,
@@ -74,36 +73,36 @@ class ChatAttachmentSheet extends StatelessWidget {
                     Navigator.pop(context);
                     onSelected(item['type'] as String, item['title'] as String);
                   },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: (item['color'] as Color).withValues(alpha: 0.14),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF21262D),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF30363D)),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
                           item['icon'] as IconData,
                           color: item['color'] as Color,
                           size: 26,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        item['title'] as String,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+                        const SizedBox(height: 6),
+                        Text(
+                          item['title'] as String,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFF0F6FC),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

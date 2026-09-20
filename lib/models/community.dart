@@ -4,6 +4,8 @@ class Community {
   final String description;
   final String regionId;
   final String regionName;
+  final String locationSpot; // e.g. 'DDU Library', 'Campus Canteen', 'Sports Ground'
+  final String creatorId; // WhatsApp-style creator ID who can delete the group
   final String category; // 'Campus', 'Academics', 'Housing', 'Food & Dining', 'Tech & Clubs', 'Sports'
   final int memberCount;
   final int questionCount;
@@ -18,6 +20,8 @@ class Community {
     required this.description,
     required this.regionId,
     required this.regionName,
+    this.locationSpot = 'DDU Campus',
+    this.creatorId = 'user-hardik',
     required this.category,
     required this.memberCount,
     required this.questionCount,
@@ -37,6 +41,8 @@ class Community {
     String? description,
     String? regionId,
     String? regionName,
+    String? locationSpot,
+    String? creatorId,
     String? category,
     int? memberCount,
     int? questionCount,
@@ -51,6 +57,8 @@ class Community {
       description: description ?? this.description,
       regionId: regionId ?? this.regionId,
       regionName: regionName ?? this.regionName,
+      locationSpot: locationSpot ?? this.locationSpot,
+      creatorId: creatorId ?? this.creatorId,
       category: category ?? this.category,
       memberCount: memberCount ?? this.memberCount,
       questionCount: questionCount ?? this.questionCount,
@@ -68,6 +76,8 @@ class Community {
       'description': description,
       'regionId': regionId,
       'regionName': regionName,
+      'locationSpot': locationSpot,
+      'creatorId': creatorId,
       'category': category,
       'memberCount': memberCount,
       'questionCount': questionCount,
@@ -85,6 +95,8 @@ class Community {
       description: json['description'] as String? ?? '',
       regionId: json['regionId'] as String? ?? 'default',
       regionName: json['regionName'] as String? ?? 'General Campus',
+      locationSpot: json['locationSpot'] as String? ?? 'DDU Campus',
+      creatorId: json['creatorId'] as String? ?? 'user-hardik',
       category: json['category'] as String? ?? 'Campus',
       memberCount: json['memberCount'] as int? ?? 0,
       questionCount: json['questionCount'] as int? ?? 0,

@@ -11,29 +11,100 @@ const generateToken = (id) => {
   });
 };
 
+exports.checkUsername = async (req, res) => {
+  try {
+    const rawUsername = req.params.username || req.query.username || '';
+    const clean = rawUsername.trim().toLowerCase().replace(/^@/, '');
+
+    if (!clean || clean.length < 3) {
+      return res.json({ available: false, message: 'Username must be at least 3 characters' });
+    }
+
+    let exists = false;
+    if (isConnected()) {
+      const found = await User.findOne({ username: clean });
+      if (found) exists = true;
+    }
+    if (!exists) {
+      exists = store.users.some((u) => u.username && u.username.toLowerCase() === clean);
+    }
+
+    return res.json({ available: !exists, username: clean });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getUsers = async (req, res) => {
+  try {
+    const query = (req.query.q || '').trim().toLowerCase().replace(/^@/, '');
+
+    if (isConnected()) {
+      const users = await User.find(
+        query
+          ? {
+              $or: [
+                { username: { $regex: query, $options: 'i' } },
+                { name: { $regex: query, $options: 'i' } },
+              ],
+            }
+          : {}
+      ).select('-password');
+      return res.json({ success: true, users });
+    } else {
+      let users = store.users.map(({ password, ...u }) => ({
+        ...u,
+        handle: `@${u.username}`,
+      }));
+
+      if (query) {
+        users = users.filter(
+          (u) =>
+            (u.username && u.username.toLowerCase().includes(query)) ||
+            (u.name && u.name.toLowerCase().includes(query))
+        );
+      }
+      return res.json({ success: true, users });
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, campusOrCity, majorOrBio } = req.body;
+    const { name, username, email, password, campusOrCity, majorOrBio } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide all required fields' });
     }
 
+    const cleanUsername = (username || (email.includes('@') ? email.split('@')[0] : 'user'))
+      .trim()
+      .toLowerCase()
+      .replace(/^@/, '');
+
     if (isConnected()) {
-      const userExists = await User.findOne({ email });
-      if (userExists) {
+      const emailExists = await User.findOne({ email });
+      if (emailExists) {
         return res.status(400).json({ success: false, message: 'User with this email already exists' });
       }
+      const usernameExists = await User.findOne({ username: cleanUsername });
+      if (usernameExists) {
+        return res.status(400).json({ success: false, message: 'Username is already taken' });
+      }
+
       const isCollegeVerified = email.endsWith('.ddu.ac.in') || email.includes('ddu');
       const user = await User.create({
         name,
+        username: cleanUsername,
         email,
         password,
         campusOrCity: campusOrCity || 'DDU, Nadiad, Gujarat',
         majorOrBio: majorOrBio || 'Student',
         isCollegeVerified,
-        joinedCommunityIds: ['c1'],
-        badges: ['New Member'],
+        joinedCommunityIds: [],
+        badges: [],
       });
 
       return res.status(201).json({
@@ -41,6 +112,7 @@ exports.register = async (req, res) => {
         token: generateToken(user._id),
         user: {
           id: user._id.toString(),
+          username: user.username,
           name: user.name,
           email: user.email,
           campusOrCity: user.campusOrCity,
@@ -53,9 +125,16 @@ exports.register = async (req, res) => {
       });
     } else {
       // In-Memory store fallback
-      const userExists = store.users.find((u) => u.email === email);
-      if (userExists) {
+      const emailExists = store.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+      if (emailExists) {
         return res.status(400).json({ success: false, message: 'User with this email already exists' });
+      }
+
+      const usernameExists = store.users.find(
+        (u) => u.username && u.username.toLowerCase() === cleanUsername
+      );
+      if (usernameExists) {
+        return res.status(400).json({ success: false, message: 'Username is already taken' });
       }
 
       const salt = await bcrypt.genSalt(10);
@@ -64,14 +143,15 @@ exports.register = async (req, res) => {
 
       const newUser = {
         id: uuidv4(),
+        username: cleanUsername,
         name,
         email,
         password: hashedPassword,
         campusOrCity: campusOrCity || 'DDU, Nadiad, Gujarat',
         majorOrBio: majorOrBio || 'Student',
         reputation: 50,
-        joinedCommunityIds: ['c1'],
-        badges: ['New Member', isCollegeVerified ? 'Verified DDU Student' : 'Campus Member'],
+        joinedCommunityIds: [],
+        badges: [],
         isCollegeVerified,
       };
 
@@ -82,6 +162,7 @@ exports.register = async (req, res) => {
         token: generateToken(newUser.id),
         user: {
           id: newUser.id,
+          username: newUser.username,
           name: newUser.name,
           email: newUser.email,
           campusOrCity: newUser.campusOrCity,
@@ -100,19 +181,25 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide email and password' });
+    const input = (req.body.usernameOrEmail || req.body.email || req.body.username || '').trim().toLowerCase().replace(/^@/, '');
+    const password = req.body.password;
+
+    if (!input || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide username/email and password' });
     }
 
     if (isConnected()) {
-      const user = await User.findOne({ email });
+      const user = await User.findOne({
+        $or: [{ email: input }, { username: input }],
+      });
+
       if (user && (await user.matchPassword(password))) {
         return res.json({
           success: true,
           token: generateToken(user._id),
           user: {
             id: user._id.toString(),
+            username: user.username,
             name: user.name,
             email: user.email,
             campusOrCity: user.campusOrCity,
@@ -124,12 +211,19 @@ exports.login = async (req, res) => {
           },
         });
       }
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ success: false, message: 'Invalid username/email or password' });
     } else {
       // In-Memory store fallback
-      let user = store.users.find((u) => u.email === email);
-      if (!user && email === 'hardik@ddu.ac.in') {
+      let user = store.users.find(
+        (u) =>
+          (u.email && u.email.toLowerCase() === input) ||
+          (u.username && u.username.toLowerCase() === input)
+      );
+
+      if (!user && (input === 'hardik' || input === 'hardik@ddu.ac.in')) {
         user = store.users[0];
+      } else if (!user && (input === 'rahul_ce' || input === 'rahul@ddu.ac.in')) {
+        user = store.users[1];
       }
 
       if (user) {
@@ -138,18 +232,19 @@ exports.login = async (req, res) => {
           token: generateToken(user.id),
           user: {
             id: user.id,
+            username: user.username || 'user',
             name: user.name,
             email: user.email,
             campusOrCity: user.campusOrCity,
             majorOrBio: user.majorOrBio,
             reputation: user.reputation,
             isCollegeVerified: user.isCollegeVerified,
-            joinedCommunityIds: user.joinedCommunityIds,
-            badges: user.badges,
+            joinedCommunityIds: user.joinedCommunityIds || [],
+            badges: user.badges || [],
           },
         });
       }
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      return res.status(401).json({ success: false, message: 'Invalid username/email or password' });
     }
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });

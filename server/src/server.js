@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth.routes');
 const communityRoutes = require('./routes/community.routes');
 const questionRoutes = require('./routes/question.routes');
 const chatRoutes = require('./routes/chat.routes');
+const friendRoutes = require('./routes/friend.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -49,6 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/friends', friendRoutes);
 
 // 404 Handler
 app.use((req, res) => {

@@ -24,22 +24,45 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
     'What are the timings? ⏰',
     'Thanks for the help! 🙌',
     'Is it open right now? 🚪',
-    'Can someone share the PDF notes? 📚',
+    'Can someone share the notes? 📚',
   ];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      final chatProvider = context.read<ChatProvider>();
+      chatProvider.joinRoom(widget.roomId, auth.currentUser?.name ?? 'User');
+      chatProvider.markRoomAsRead(widget.roomId);
+    });
+
     _messageController.addListener(() {
       final hasText = _messageController.text.trim().isNotEmpty;
       if (hasText != _isTypingText) {
         setState(() => _isTypingText = hasText);
+        if (mounted) {
+          final auth = context.read<AuthProvider>();
+          final chatProvider = context.read<ChatProvider>();
+          if (hasText) {
+            chatProvider.startTyping(widget.roomId, auth.currentUser?.name ?? 'User');
+          } else {
+            chatProvider.stopTyping(widget.roomId, auth.currentUser?.name ?? 'User');
+          }
+        }
       }
     });
   }
 
   @override
   void dispose() {
+    try {
+      final auth = context.read<AuthProvider>();
+      final chatProvider = context.read<ChatProvider>();
+      chatProvider.stopTyping(widget.roomId, auth.currentUser?.name ?? 'User');
+      chatProvider.leaveRoom(widget.roomId, auth.currentUser?.name ?? 'User');
+    } catch (_) {}
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -89,14 +112,14 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
   }
 
   void _showRoomDetailsModal(BuildContext context, dynamic room) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF151C2C) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        decoration: const BoxDecoration(
+          color: Color(0xFF161B22),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(top: BorderSide(color: Color(0xFF30363D))),
         ),
         padding: const EdgeInsets.all(20),
         child: SafeArea(
@@ -107,7 +130,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 width: 60,
                 height: 60,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFEDE9FE),
+                  color: Color(0xFF21262D),
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -116,27 +139,32 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               const SizedBox(height: 12),
               Text(
                 room.title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
               ),
+              const SizedBox(height: 4),
               Text(
-                room.isGroup ? 'Campus Group • Active Discussion' : 'Direct Campus Chat',
-                style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B)),
+                room.isGroup ? 'Campus Group • Active Discussion' : (room.subtitle ?? 'Personal Chat'),
+                style: const TextStyle(fontSize: 12.5, color: Color(0xFF8B949E)),
               ),
               const SizedBox(height: 18),
               ListTile(
-                leading: const Icon(Icons.notifications_active_outlined, color: Color(0xFF7C3AED)),
-                title: const Text('Mute Notifications'),
-                trailing: Switch(value: false, onChanged: (v) {}),
+                leading: const Icon(Icons.notifications_active_outlined, color: Color(0xFF58A6FF)),
+                title: const Text('Mute Notifications', style: TextStyle(color: Color(0xFFF0F6FC))),
+                trailing: Switch(
+                  value: false,
+                  activeThumbColor: const Color(0xFF238636),
+                  onChanged: (v) {},
+                ),
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF7C3AED)),
-                title: const Text('Media, Links & Docs'),
-                trailing: const Icon(Icons.chevron_right),
+                leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF58A6FF)),
+                title: const Text('Media, Links & Docs', style: TextStyle(color: Color(0xFFF0F6FC))),
+                trailing: const Icon(Icons.chevron_right, color: Color(0xFF8B949E)),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
-                leading: const Icon(Icons.report_problem_outlined, color: Colors.redAccent),
-                title: const Text('Report Conversation', style: TextStyle(color: Colors.redAccent)),
+                leading: const Icon(Icons.report_problem_outlined, color: Color(0xFFF85149)),
+                title: const Text('Report Conversation', style: TextStyle(color: Color(0xFFF85149))),
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -153,25 +181,32 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final auth = context.watch<AuthProvider>();
+    final currentUser = auth.currentUser;
+    final currentUserId = currentUser?.id ?? 'user-hardik';
 
     final chatProvider = context.watch<ChatProvider>();
     final room = chatProvider.rooms.firstWhere(
       (r) => r.id == widget.roomId,
-      orElse: () => chatProvider.rooms.first,
+      orElse: () => chatProvider.rooms.isNotEmpty
+          ? chatProvider.rooms.first
+          : chatProvider.getOrCreateCommunityRoom(widget.roomId, 'Chat', '💬'),
     );
 
-    final messages = chatProvider.getMessages(widget.roomId);
+    final allMessages = chatProvider.getMessages(widget.roomId, currentUserId: currentUserId);
+    // Filter out messages deleted for this user
+    final messages = allMessages.where((m) => !m.deletedForUserIds.contains(currentUserId)).toList();
     final isTyping = chatProvider.isTyping(widget.roomId);
     final typingUserName = chatProvider.getTypingUser(widget.roomId);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF151C2C) : Colors.white,
-        elevation: 0.5,
+        backgroundColor: const Color(0xFF161B22),
+        elevation: 0,
         titleSpacing: 0,
+        iconTheme: const IconThemeData(color: Color(0xFFF0F6FC)),
+        shape: const Border(bottom: BorderSide(color: Color(0xFF30363D), width: 1)),
         title: InkWell(
           onTap: () => _showRoomDetailsModal(context, room),
           child: Row(
@@ -179,11 +214,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               Stack(
                 children: [
                   CircleAvatar(
-                    radius: 19,
-                    backgroundColor: const Color(0xFFEDE9FE),
+                    radius: 18,
+                    backgroundColor: const Color(0xFF21262D),
                     child: Text(
-                      room.avatarEmoji ?? '💬',
-                      style: const TextStyle(fontSize: 18),
+                      room.avatarEmoji ?? (room.isGroup ? '💬' : '👤'),
+                      style: const TextStyle(fontSize: 17),
                     ),
                   ),
                   if (room.isOnline)
@@ -194,10 +229,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981),
+                          color: const Color(0xFF238636),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: isDark ? const Color(0xFF151C2C) : Colors.white,
+                            color: const Color(0xFF161B22),
                             width: 1.5,
                           ),
                         ),
@@ -214,10 +249,10 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                       room.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15.5,
+                      style: const TextStyle(
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        color: Color(0xFFF0F6FC),
                       ),
                     ),
                     Text(
@@ -225,8 +260,8 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                           ? '${typingUserName ?? "Peer"} is typing...'
                           : (room.subtitle ?? (room.isOnline ? 'Online' : 'Offline')),
                       style: TextStyle(
-                        fontSize: 11.5,
-                        color: isTyping ? const Color(0xFF7C3AED) : const Color(0xFF64748B),
+                        fontSize: 11,
+                        color: isTyping ? const Color(0xFF58A6FF) : const Color(0xFF8B949E),
                         fontStyle: isTyping ? FontStyle.italic : FontStyle.normal,
                         fontWeight: isTyping ? FontWeight.w600 : FontWeight.normal,
                       ),
@@ -239,7 +274,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline_rounded),
+            icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF8B949E)),
             onPressed: () => _showRoomDetailsModal(context, room),
           ),
           const SizedBox(width: 4),
@@ -251,14 +286,14 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           if (_isAnonymousChat)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              color: const Color(0xFFFCE7F3),
+              color: const Color(0xFF21262D),
               child: const Row(
                 children: [
-                  Icon(Icons.masks_rounded, size: 16, color: Color(0xFFDB2777)),
+                  Icon(Icons.masks_rounded, size: 16, color: Color(0xFFF0883E)),
                   SizedBox(width: 8),
                   Text(
-                    'Anonymous Chat Active: Your name is masked as Anonymous Peer',
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFFBE185D)),
+                    'Anonymous Mode: Your identity is masked',
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFFF0883E)),
                   ),
                 ],
               ),
@@ -278,13 +313,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                     child: Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
-                            ),
+                            color: const Color(0xFF161B22),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFF30363D)),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -294,13 +327,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                                 height: 12,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF58A6FF)),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Text(
                                 '${typingUserName ?? "Peer"} is typing...',
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF7C3AED), fontWeight: FontWeight.w500),
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF58A6FF), fontWeight: FontWeight.w500),
                               ),
                             ],
                           ),
@@ -314,6 +347,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                 return ChatBubble(
                   message: msg,
                   showSenderName: room.isGroup,
+                  currentUserId: currentUserId,
+                  onLike: () => chatProvider.toggleLikeMessage(widget.roomId, msg.id, currentUserId),
+                  onDislike: () => chatProvider.toggleDislikeMessage(widget.roomId, msg.id, currentUserId),
+                  onEdit: (newText) => chatProvider.editMessage(widget.roomId, msg.id, newText),
+                  onDelete: (forEveryone) => chatProvider.deleteMessage(widget.roomId, msg.id, forEveryone: forEveryone, userId: currentUserId),
                 );
               },
             ),
@@ -322,7 +360,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
           // Quick Replies Chips
           Container(
             height: 38,
-            color: isDark ? const Color(0xFF151C2C) : Colors.white,
+            color: const Color(0xFF161B22),
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               scrollDirection: Axis.horizontal,
@@ -331,11 +369,13 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               itemBuilder: (context, index) {
                 final qr = _quickReplies[index];
                 return ActionChip(
-                  label: Text(qr, style: const TextStyle(fontSize: 11.5)),
+                  label: Text(qr, style: const TextStyle(fontSize: 11.5, color: Color(0xFFF0F6FC))),
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  side: BorderSide.none,
+                  backgroundColor: const Color(0xFF21262D),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: const BorderSide(color: Color(0xFF30363D)),
+                  ),
                   onPressed: () => _sendMessage(qr),
                 );
               },
@@ -350,21 +390,16 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
               top: 8,
               bottom: MediaQuery.of(context).viewInsets.bottom + 8,
             ),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF151C2C) : Colors.white,
-              border: Border(
-                top: BorderSide(
-                  color: isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0),
-                  width: 1,
-                ),
-              ),
+            decoration: const BoxDecoration(
+              color: Color(0xFF161B22),
+              border: Border(top: BorderSide(color: Color(0xFF30363D), width: 1)),
             ),
             child: SafeArea(
               child: Row(
                 children: [
                   // Attachment (+) button
                   IconButton(
-                    icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF7C3AED), size: 24),
+                    icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF58A6FF), size: 24),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => ChatAttachmentSheet.show(context, _handleAttachment),
@@ -375,7 +410,7 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   IconButton(
                     icon: Icon(
                       _isAnonymousChat ? Icons.masks_rounded : Icons.masks_outlined,
-                      color: _isAnonymousChat ? const Color(0xFFDB2777) : const Color(0xFF94A3B8),
+                      color: _isAnonymousChat ? const Color(0xFFF0883E) : const Color(0xFF8B949E),
                       size: 22,
                     ),
                     padding: EdgeInsets.zero,
@@ -391,23 +426,32 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                   Expanded(
                     child: TextField(
                       controller: _messageController,
+                      style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
                       decoration: InputDecoration(
                         hintText: _isAnonymousChat ? 'Message anonymously...' : 'Type a message...',
-                        hintStyle: const TextStyle(fontSize: 13.5),
+                        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF8B949E)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: const BorderSide(color: Color(0xFF30363D)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: const BorderSide(color: Color(0xFF30363D)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: const BorderSide(color: Color(0xFF58A6FF)),
                         ),
                         filled: true,
-                        fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                        fillColor: const Color(0xFF0D1117),
                       ),
                       onSubmitted: (_) => _sendMessage(),
                     ),
                   ),
                   const SizedBox(width: 8),
 
-                  // Send or Mic Voice Button
+                  // Send or Mic Voice Button - High Contrast Visible Button
                   InkWell(
                     onTap: () {
                       if (_isTypingText) {
@@ -416,17 +460,21 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
                         _handleAttachment('audio', 'Voice note');
                       }
                     },
-                    borderRadius: BorderRadius.circular(22),
+                    borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF238636), // High contrast GitHub Green
                         shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0x33FFFFFF), width: 1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF238636).withValues(alpha: 0.4),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Icon(
                         _isTypingText ? Icons.send_rounded : Icons.mic_rounded,

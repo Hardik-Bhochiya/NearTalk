@@ -1,8 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/custom_text_field.dart';
-import '../../widgets/primary_button.dart';
+import '../../services/api_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -13,132 +13,519 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _campusController = TextEditingController(text: 'Silicon Valley Campus');
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  String _selectedLocation = 'Nadiad';
+  final List<String> _locations = ['Mumbai', 'Ahmedabad', 'Dwarka', 'Nadiad'];
+
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  Timer? _debounceTimer;
+  bool _isCheckingUsername = false;
+  bool? _isUsernameAvailable;
+  String _usernameStatusMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameController.addListener(_onUsernameChanged);
+  }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _debounceTimer?.cancel();
+    _usernameController.removeListener(_onUsernameChanged);
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
-    _campusController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _onUsernameChanged() {
+    final raw = _usernameController.text.trim().toLowerCase().replaceAll('@', '');
+    _debounceTimer?.cancel();
+
+    if (raw.isEmpty) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = null;
+        _usernameStatusMessage = '';
+      });
+      return;
+    }
+
+    if (raw.length < 3) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = false;
+        _usernameStatusMessage = 'Username must be at least 3 characters';
+      });
+      return;
+    }
+
+    if (!RegExp(r'^[a-z0-9_]+$').hasMatch(raw)) {
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = false;
+        _usernameStatusMessage = 'Only lowercase letters, numbers, and underscores allowed';
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingUsername = true;
+      _usernameStatusMessage = 'Checking availability...';
+    });
+
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      final auth = context.read<AuthProvider>();
+      bool available = auth.isUsernameAvailable(raw);
+
+      if (available && ApiService().isServerReachable) {
+        available = await ApiService().checkUsernameAvailable(raw);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _isCheckingUsername = false;
+        _isUsernameAvailable = available;
+        _usernameStatusMessage = available
+            ? '@$raw is available!'
+            : '@$raw is already taken. Try another.';
+      });
+    });
   }
 
   void _handleSignUp() async {
     if (_formKey.currentState?.validate() ?? false) {
+      if (_isUsernameAvailable == false) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please choose an available username first.')),
+        );
+        return;
+      }
+
       final auth = context.read<AuthProvider>();
+      final uName = _usernameController.text.trim().toLowerCase().replaceAll('@', '');
+      final fName = _firstNameController.text.trim();
+      final lName = _lastNameController.text.trim();
+      final fullName = '$fName $lName'.trim();
+
       final success = await auth.signUp(
-        name: _nameController.text.trim(),
+        name: fullName,
+        username: uName,
+        firstName: fName,
+        lastName: lName,
         email: _emailController.text.trim(),
-        campus: _campusController.text.trim(),
         password: _passwordController.text.trim(),
+        campusOrCity: _selectedLocation,
+        majorOrBio: '$_selectedLocation Community Member',
       );
+
       if (success && mounted) {
         Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF238636),
+            content: Text('Welcome to NearTalk, @$uName! 🎉'),
+          ),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
+      backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
-        title: const Text('Create Account'),
+        backgroundColor: const Color(0xFF161B22),
+        elevation: 0,
+        shape: const Border(bottom: BorderSide(color: Color(0xFF30363D))),
+        title: const Text(
+          'Sign Up — NearTalk',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFFF0F6FC)),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Join Your Local Community',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
+                // Header Badge
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161B22),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF30363D)),
+                  ),
+                  child: const Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Color(0xFF21262D),
+                        child: Text('📍', style: TextStyle(fontSize: 22)),
+                      ),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Join Location Communities',
+                              style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Connect with peers in your city, join local groups, and chat.',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF8B949E)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                // First Name & Last Name Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'FIRST NAME *',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B949E), letterSpacing: 0.6),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF161B22),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFF30363D)),
+                            ),
+                            child: TextFormField(
+                              controller: _firstNameController,
+                              style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
+                              decoration: const InputDecoration(
+                                hintText: 'Hardik',
+                                hintStyle: TextStyle(color: Color(0xFF8B949E), fontSize: 13),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              ),
+                              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'LAST NAME',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B949E), letterSpacing: 0.6),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF161B22),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFF30363D)),
+                            ),
+                            child: TextFormField(
+                              controller: _lastNameController,
+                              style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
+                              decoration: const InputDecoration(
+                                hintText: 'Bhochiya',
+                                hintStyle: TextStyle(color: Color(0xFF8B949E), fontSize: 13),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Username *
+                const Text(
+                  'USERNAME * (PRIMARY KEY)',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B949E), letterSpacing: 0.6),
+                ),
                 const SizedBox(height: 6),
-                Text(
-                  'Connect with verified students, seniors, and locals in your area.',
-                  style: TextStyle(
-                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                    fontSize: 14,
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161B22),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _isUsernameAvailable == true
+                          ? const Color(0xFF238636)
+                          : (_isUsernameAvailable == false
+                              ? const Color(0xFFF85149)
+                              : const Color(0xFF30363D)),
+                      width: _isUsernameAvailable != null ? 1.5 : 1,
+                    ),
+                  ),
+                  child: TextFormField(
+                    controller: _usernameController,
+                    style: const TextStyle(color: Color(0xFFF0F6FC), fontWeight: FontWeight.w600, fontSize: 14.5),
+                    decoration: InputDecoration(
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          '@',
+                          style: TextStyle(color: Color(0xFF58A6FF), fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                      hintText: 'hardik_07',
+                      hintStyle: const TextStyle(color: Color(0xFF8B949E), fontSize: 13),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      suffixIcon: _isCheckingUsername
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF58A6FF)),
+                              ),
+                            )
+                          : (_isUsernameAvailable != null
+                              ? Icon(
+                                  _isUsernameAvailable! ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                                  color: _isUsernameAvailable! ? const Color(0xFF238636) : const Color(0xFFF85149),
+                                  size: 20,
+                                )
+                              : null),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Username is required';
+                      final clean = v.trim().toLowerCase().replaceAll('@', '');
+                      if (clean.length < 3) return 'Must be at least 3 characters';
+                      if (_isUsernameAvailable == false) return 'Username is already taken';
+                      return null;
+                    },
+                  ),
+                ),
+                if (_usernameStatusMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, left: 4),
+                    child: Text(
+                      _usernameStatusMessage,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: _isUsernameAvailable == true ? const Color(0xFF238636) : const Color(0xFFF85149),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 16),
+
+                // Email *
+                const Text(
+                  'EMAIL ADDRESS *',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B949E), letterSpacing: 0.6),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161B22),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF30363D)),
+                  ),
+                  child: TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.email_outlined, color: Color(0xFF8B949E), size: 18),
+                      hintText: 'hardik@gmail.com',
+                      hintStyle: TextStyle(color: Color(0xFF8B949E), fontSize: 13),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Email is required';
+                      if (!v.contains('@')) return 'Enter a valid email';
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Location * Dropdown
+                const Text(
+                  'LOCATION * (CITY)',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B949E), letterSpacing: 0.6),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161B22),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF30363D)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedLocation,
+                      dropdownColor: const Color(0xFF21262D),
+                      style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
+                      icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF58A6FF)),
+                      isExpanded: true,
+                      items: _locations.map((loc) {
+                        return DropdownMenuItem(
+                          value: loc,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on_rounded, color: Color(0xFF58A6FF), size: 16),
+                              const SizedBox(width: 8),
+                              Text(loc, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => _selectedLocation = val);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Password *
+                const Text(
+                  'PASSWORD *',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B949E), letterSpacing: 0.6),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161B22),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF30363D)),
+                  ),
+                  child: TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.lock_outline_rounded, color: Color(0xFF8B949E), size: 18),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF8B949E), size: 18),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                      hintText: 'Minimum 6 characters',
+                      hintStyle: const TextStyle(color: Color(0xFF8B949E), fontSize: 13),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.length < 6) return 'Password must be at least 6 characters';
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Confirm Password *
+                const Text(
+                  'CONFIRM PASSWORD *',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8B949E), letterSpacing: 0.6),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161B22),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF30363D)),
+                  ),
+                  child: TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: _obscureConfirmPassword,
+                    style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.lock_reset_rounded, color: Color(0xFF8B949E), size: 18),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF8B949E), size: 18),
+                        onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                      ),
+                      hintText: 'Re-enter your password',
+                      hintStyle: const TextStyle(color: Color(0xFF8B949E), fontSize: 13),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Please confirm password';
+                      if (v != _passwordController.text) return 'Passwords do not match';
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                // Name
-                CustomTextField(
-                  controller: _nameController,
-                  labelText: 'Full Name',
-                  hintText: 'e.g. Alex Morgan',
-                  prefixIcon: Icons.person_outline_rounded,
-                  validator: (v) => (v == null || v.isEmpty) ? 'Please enter your name' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Email
-                CustomTextField(
-                  controller: _emailController,
-                  labelText: 'College / Personal Email',
-                  hintText: 'student@campus.edu',
-                  prefixIcon: Icons.alternate_email_rounded,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please enter your email';
-                    if (!v.contains('@')) return 'Enter a valid email';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Campus
-                CustomTextField(
-                  controller: _campusController,
-                  labelText: 'Campus / City Region',
-                  hintText: 'e.g. Silicon Valley Campus',
-                  prefixIcon: Icons.school_outlined,
-                  validator: (v) => (v == null || v.isEmpty) ? 'Please enter your campus/region' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Password
-                CustomTextField(
-                  controller: _passwordController,
-                  labelText: 'Password',
-                  hintText: 'Minimum 6 characters',
-                  prefixIcon: Icons.lock_outline_rounded,
-                  obscureText: _obscurePassword,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                      size: 20,
-                      color: const Color(0xFF94A3B8),
+                // Sign Up Button
+                ElevatedButton(
+                  onPressed: auth.status == AuthStatus.authenticating ? null : _handleSignUp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF238636),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Color(0x33FFFFFF)),
                     ),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    elevation: 2,
                   ),
-                  validator: (v) {
-                    if (v == null || v.length < 6) return 'Password must be at least 6 characters';
-                    return null;
-                  },
+                  child: auth.status == AuthStatus.authenticating
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text(
+                          'Sign Up',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 18),
 
-                PrimaryButton(
-                  text: 'Create Account',
-                  isLoading: auth.status == AuthStatus.authenticating,
-                  onPressed: _handleSignUp,
+                // Link back to Login
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Already have an account? ', style: TextStyle(color: Color(0xFF8B949E), fontSize: 13)),
+                    InkWell(
+                      onTap: () => Navigator.pop(context),
+                      child: const Text(
+                        'Sign In',
+                        style: TextStyle(color: Color(0xFF58A6FF), fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

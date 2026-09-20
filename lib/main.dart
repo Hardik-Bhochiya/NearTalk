@@ -7,12 +7,17 @@ import 'providers/community_provider.dart';
 import 'providers/question_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/notification_provider.dart';
+import 'services/local_store_service.dart';
+import 'services/api_service.dart';
 import 'widgets/mobile_device_frame.dart';
 import 'screens/main_nav_screen.dart';
 import 'screens/auth/login_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await LocalStoreService().init();
+  await ApiService().init();
+
   runApp(
     MultiProvider(
       providers: [

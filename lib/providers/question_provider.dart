@@ -4,6 +4,7 @@ import '../models/question.dart';
 import '../models/reply.dart';
 import '../models/user.dart';
 import '../services/mock_data_service.dart';
+import '../services/local_store_service.dart';
 import '../services/api_service.dart';
 
 class QuestionProvider extends ChangeNotifier {
@@ -34,15 +35,27 @@ class QuestionProvider extends ChangeNotifier {
 
   Future<void> _loadQuestions() async {
     _isLoading = true;
-    _questions = List.from(MockDataService.initialQuestions);
-    try {
-      final remoteQuestions = await ApiService().getQuestions();
-      if (remoteQuestions.isNotEmpty) {
-        _questions = remoteQuestions;
-      }
-    } catch (_) {}
+    // 1. Immediately load local persisted questions (zero delay, fully offline capable)
+    _questions = LocalStoreService().getQuestions();
+    if (_questions.isEmpty) {
+      _questions = List.from(MockDataService.initialQuestions);
+    }
     _isLoading = false;
     notifyListeners();
+
+    // 2. If online server is reachable, check for remote updates in background
+    try {
+      if (ApiService().isServerReachable) {
+        final remoteQuestions = await ApiService().getQuestions();
+        if (remoteQuestions.isNotEmpty) {
+          _questions = remoteQuestions;
+          for (final q in remoteQuestions) {
+            LocalStoreService().updateQuestion(q);
+          }
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
   }
 
   void selectTag(String tag) {
@@ -86,6 +99,9 @@ class QuestionProvider extends ChangeNotifier {
     return list;
   }
 
+  List<Question> get mainQuestions => _questions.where((q) => !q.isAnonymous).toList();
+  List<Question> get anonymousQuestions => _questions.where((q) => q.isAnonymous).toList();
+
   List<Question> get trendingQuestions {
     final list = List<Question>.from(_questions);
     list.sort((a, b) => (b.upvotes + b.replyCount * 2).compareTo(a.upvotes + a.replyCount * 2));
@@ -113,6 +129,7 @@ class QuestionProvider extends ChangeNotifier {
     if (index != -1) {
       final q = _questions[index];
       _questions[index] = q.copyWith(isBookmarked: !q.isBookmarked);
+      LocalStoreService().toggleBookmark(questionId);
       notifyListeners();
     }
   }
@@ -154,10 +171,12 @@ class QuestionProvider extends ChangeNotifier {
       isBookmarked: false,
     );
 
+    // Save locally for guaranteed mobile permanence
     _questions.insert(0, newQuestion);
+    LocalStoreService().addQuestion(newQuestion);
     notifyListeners();
 
-    // Async sync with backend
+    // Background sync with API
     try {
       await ApiService().createQuestion(
         title: title,
@@ -183,6 +202,7 @@ class QuestionProvider extends ChangeNotifier {
         isUpvotedByMe: newUpvoted,
         upvotes: newCount < 0 ? 0 : newCount,
       );
+      LocalStoreService().toggleUpvote(questionId);
       notifyListeners();
 
       ApiService().toggleUpvote(questionId);
@@ -215,6 +235,7 @@ class QuestionProvider extends ChangeNotifier {
 
       final updatedReplies = List<Reply>.from(q.replies)..add(newReply);
       _questions[index] = q.copyWith(replies: updatedReplies);
+      LocalStoreService().addReply(questionId, newReply);
       notifyListeners();
 
       ApiService().addReply(
@@ -241,6 +262,7 @@ class QuestionProvider extends ChangeNotifier {
         );
         final updatedReplies = List<Reply>.from(q.replies)..[rIndex] = updatedReply;
         _questions[qIndex] = q.copyWith(replies: updatedReplies);
+        LocalStoreService().updateQuestion(_questions[qIndex]);
         notifyListeners();
       }
     }

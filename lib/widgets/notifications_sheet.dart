@@ -87,62 +87,65 @@ class NotificationsSheet extends StatelessWidget {
                     separatorBuilder: (_, __) => const Divider(height: 1, indent: 70),
                     itemBuilder: (context, index) {
                       final n = notifications[index];
-                      return ListTile(
-                        onTap: () {
-                          notifProvider.markAsRead(n.id);
-                          Navigator.pop(context);
-                        },
-                        tileColor: !n.isRead
-                            ? (isDark
-                                ? const Color(0xFF1E1B4B).withValues(alpha: 0.3)
-                                : const Color(0xFFF5F3FF))
-                            : Colors.transparent,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                        leading: Container(
-                          width: 44,
-                          height: 44,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEDE9FE),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(n.iconEmoji, style: const TextStyle(fontSize: 20)),
-                        ),
-                        title: Text(
-                          n.title,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: !n.isRead ? FontWeight.bold : FontWeight.w600,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 2),
-                            Text(
-                              n.message,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                              ),
+                      return Material(
+                        color: Colors.transparent,
+                        child: ListTile(
+                          onTap: () {
+                            notifProvider.markAsRead(n.id);
+                            Navigator.pop(context);
+                          },
+                          tileColor: !n.isRead
+                              ? (isDark
+                                  ? const Color(0xFF1E1B4B).withValues(alpha: 0.3)
+                                  : const Color(0xFFF5F3FF))
+                              : Colors.transparent,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                          leading: Container(
+                            width: 44,
+                            height: 44,
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEDE9FE),
+                              shape: BoxShape.circle,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              n.timeAgo,
-                              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                            child: Text(n.iconEmoji, style: const TextStyle(fontSize: 20)),
+                          ),
+                          title: Text(
+                            n.title,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: !n.isRead ? FontWeight.bold : FontWeight.w600,
                             ),
-                          ],
-                        ),
-                        trailing: !n.isRead
-                            ? Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF7C3AED),
-                                  shape: BoxShape.circle,
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 2),
+                              Text(
+                                n.message,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                                 ),
-                              )
-                            : null,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                n.timeAgo,
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                              ),
+                            ],
+                          ),
+                          trailing: !n.isRead
+                              ? Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF7C3AED),
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                              : null,
+                        ),
                       );
                     },
                   ),

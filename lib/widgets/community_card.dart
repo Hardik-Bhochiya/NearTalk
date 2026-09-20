@@ -5,6 +5,7 @@ class CommunityCard extends StatelessWidget {
   final Community community;
   final VoidCallback onTap;
   final VoidCallback onJoinToggle;
+  final VoidCallback? onDelete;
   final bool isHorizontal;
 
   const CommunityCard({
@@ -12,14 +13,12 @@ class CommunityCard extends StatelessWidget {
     required this.community,
     required this.onTap,
     required this.onJoinToggle,
+    this.onDelete,
     this.isHorizontal = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     if (isHorizontal) {
       return InkWell(
         onTap: onTap,
@@ -28,10 +27,10 @@ class CommunityCard extends StatelessWidget {
           width: 240,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF151C2C) : Colors.white,
+            color: const Color(0xFF161B22),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isDark ? const Color(0xFF2E384D) : const Color(0xFFE2E8F0),
+              color: const Color(0xFF30363D),
             ),
           ),
           child: Column(
@@ -44,8 +43,9 @@ class CommunityCard extends StatelessWidget {
                     height: 40,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Color(community.bannerColorHex).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFF21262D),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF30363D)),
                     ),
                     child: Text(
                       community.iconEmoji,
@@ -59,17 +59,18 @@ class CommunityCard extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          color: const Color(0xFF21262D),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF30363D)),
                         ),
                         child: Text(
                           community.category,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            color: Color(0xFF8B949E),
                           ),
                         ),
                       ),
@@ -82,28 +83,45 @@ class CommunityCard extends StatelessWidget {
                 community.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
+                  color: Color(0xFFF0F6FC),
                 ),
+              ),
+              const SizedBox(height: 3),
+              Row(
+                children: [
+                  const Icon(Icons.place_outlined, size: 12, color: Color(0xFF58A6FF)),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(
+                      community.locationSpot,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF58A6FF), fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
                 community.description,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
+                style: const TextStyle(
                   fontSize: 11.5,
+                  color: Color(0xFF8B949E),
                 ),
               ),
               const Spacer(),
               Row(
                 children: [
-                  const Icon(Icons.people_outline_rounded, size: 14, color: Color(0xFF94A3B8)),
+                  const Icon(Icons.people_outline_rounded, size: 14, color: Color(0xFF8B949E)),
                   const SizedBox(width: 4),
                   Text(
                     '${community.memberCount} members',
-                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF8B949E)),
                   ),
                 ],
               ),
@@ -113,8 +131,13 @@ class CommunityCard extends StatelessWidget {
       );
     }
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF30363D), width: 1.2),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -131,8 +154,9 @@ class CommunityCard extends StatelessWidget {
                     height: 48,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: Color(community.bannerColorHex).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
+                      color: const Color(0xFF21262D),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF30363D)),
                     ),
                     child: Text(
                       community.iconEmoji,
@@ -149,24 +173,43 @@ class CommunityCard extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 community.name,
-                                style: theme.textTheme.titleMedium?.copyWith(
+                                style: const TextStyle(
                                   fontWeight: FontWeight.w700,
+                                  fontSize: 15.5,
+                                  color: Color(0xFFF0F6FC),
                                 ),
                               ),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(12),
+                                color: const Color(0xFF21262D),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFF30363D)),
                               ),
                               child: Text(
                                 community.category,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                  color: Color(0xFF8B949E),
                                 ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        // Location Spot Forwarding Tag
+                        Row(
+                          children: [
+                            const Icon(Icons.place_rounded, size: 13, color: Color(0xFF58A6FF)),
+                            const SizedBox(width: 3),
+                            Text(
+                              community.locationSpot,
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF58A6FF),
                               ),
                             ),
                           ],
@@ -176,7 +219,10 @@ class CommunityCard extends StatelessWidget {
                           community.description,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFF8B949E),
+                          ),
                         ),
                       ],
                     ),
@@ -184,63 +230,74 @@ class CommunityCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              const Divider(height: 1, thickness: 0.7),
+              const Divider(height: 1, thickness: 0.8, color: Color(0xFF30363D)),
               const SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.people_alt_outlined, size: 16, color: Color(0xFF94A3B8)),
+                      const Icon(Icons.people_alt_outlined, size: 15, color: Color(0xFF8B949E)),
                       const SizedBox(width: 4),
                       Text(
                         '${community.memberCount} members',
-                        style: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF8B949E)),
                       ),
                       const SizedBox(width: 12),
-                      const Icon(Icons.forum_outlined, size: 16, color: Color(0xFF94A3B8)),
+                      const Icon(Icons.forum_outlined, size: 15, color: Color(0xFF8B949E)),
                       const SizedBox(width: 4),
                       Text(
                         '${community.questionCount} posts',
-                        style: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8)),
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF8B949E)),
                       ),
                     ],
                   ),
-                  InkWell(
-                    onTap: onJoinToggle,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: community.isJoined
-                            ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0))
-                            : theme.primaryColor,
+                  Row(
+                    children: [
+                      if (onDelete != null)
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFDA3633), size: 20),
+                          tooltip: 'Delete Community (Creator)',
+                          onPressed: onDelete,
+                        ),
+                      InkWell(
+                        onTap: onJoinToggle,
                         borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            community.isJoined ? Icons.check : Icons.add,
-                            size: 14,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
                             color: community.isJoined
-                                ? (isDark ? Colors.white70 : const Color(0xFF334155))
-                                : Colors.white,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            community.isJoined ? 'Joined' : 'Join',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                                ? const Color(0xFF21262D)
+                                : const Color(0xFF238636),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
                               color: community.isJoined
-                                  ? (isDark ? Colors.white70 : const Color(0xFF334155))
-                                  : Colors.white,
+                                  ? const Color(0xFF30363D)
+                                  : const Color(0x33FFFFFF),
                             ),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                community.isJoined ? Icons.check : Icons.add,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                community.isJoined ? 'Joined' : 'Join',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),

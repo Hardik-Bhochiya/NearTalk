@@ -9,11 +9,16 @@ import 'package:neartalk/providers/question_provider.dart';
 import 'package:neartalk/providers/chat_provider.dart';
 import 'package:neartalk/providers/notification_provider.dart';
 import 'package:neartalk/services/socket_service.dart';
+import 'package:neartalk/services/local_store_service.dart';
+import 'package:neartalk/services/api_service.dart';
 
 void main() {
-  setUp(() {
+  setUp(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});
     SocketService.disabledForTests = true;
+    await LocalStoreService().init();
+    await ApiService().init();
   });
 
   testWidgets('NearTalk App smoke test', (WidgetTester tester) async {
@@ -34,11 +39,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    // Verify that NearTalk home screen renders with custom sections
+    // Verify that NearTalk home screen renders with personalized name and location sections
     expect(find.text('NearTalk'), findsOneWidget);
-    expect(find.text('Welcome to NearTalk!'), findsOneWidget);
-    expect(find.text('Your Communities'), findsOneWidget);
-    expect(find.text('Recent Discussions'), findsOneWidget);
-    expect(find.text('Which canteen is best for lunch?'), findsOneWidget);
+    expect(find.text('Welcome, Hardik Bhochiya'), findsOneWidget);
+    expect(find.text('@hardik_07'), findsOneWidget);
+    expect(find.text('Friend Requests'), findsOneWidget);
+    expect(find.text('Suggested Communities by Location'), findsOneWidget);
+    expect(find.text('My Groups'), findsOneWidget);
   });
 }

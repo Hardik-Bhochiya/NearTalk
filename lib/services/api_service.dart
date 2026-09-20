@@ -9,15 +9,28 @@ import '../models/reply.dart';
 import '../models/chat_room.dart';
 import '../models/chat_message.dart';
 import 'mock_data_service.dart';
+import 'local_store_service.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
 
-  // On Android emulator, localhost is 10.0.2.2. On web/desktop/device, it is localhost/custom IP.
+  bool _isServerReachable = false;
+  bool _hasCheckedReachability = false;
+
+  bool get isServerReachable => _isServerReachable;
+
   String get baseUrl {
-    if (kIsWeb) return 'http://localhost:5000/api';
+    final customUrl = LocalStoreService().customBackendUrl;
+    if (customUrl != null && customUrl.isNotEmpty) {
+      return customUrl.endsWith('/api') ? customUrl : '$customUrl/api';
+    }
+
+    if (kIsWeb) {
+      final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
+      return 'http://$host:5000/api';
+    }
     return defaultTargetPlatform == TargetPlatform.android
         ? 'http://10.0.2.2:5000/api'
         : 'http://localhost:5000/api';
@@ -26,8 +39,24 @@ class ApiService {
   String? _authToken;
 
   Future<void> init() async {
+    await LocalStoreService().init();
     final prefs = await SharedPreferences.getInstance();
     _authToken = prefs.getString('auth_token');
+    await checkServerReachability();
+  }
+
+  /// Fast 600ms non-blocking check to determine if an active backend server is connected
+  Future<bool> checkServerReachability() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/health'))
+          .timeout(const Duration(milliseconds: 650));
+      _isServerReachable = response.statusCode == 200;
+    } catch (_) {
+      _isServerReachable = false;
+    }
+    _hasCheckedReachability = true;
+    return _isServerReachable;
   }
 
   Future<void> setAuthToken(String token) async {
@@ -47,112 +76,177 @@ class ApiService {
         if (_authToken != null) 'Authorization': 'Bearer $_authToken',
       };
 
-  // Auth: Login
-  Future<User?> login(String email, String password) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/auth/login'),
-            headers: _headers,
-            body: jsonEncode({'email': email, 'password': password}),
-          )
-          .timeout(const Duration(seconds: 4));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['token'] != null) {
-          await setAuthToken(data['token']);
+  Future<bool> checkUsernameAvailable(String username) async {
+    final clean = username.trim().toLowerCase().replaceAll('@', '');
+    if (clean.length < 3) return false;
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final res = await http
+            .get(Uri.parse('$baseUrl/auth/check-username/$clean'), headers: _headers)
+            .timeout(const Duration(milliseconds: 900));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          return data['available'] as bool? ?? false;
         }
-        return User.fromJson(data['user']);
-      }
-    } catch (_) {
-      // Fallback to local mock service if server is unreachable
+      } catch (_) {}
     }
-    return MockDataService.currentUser;
+    return true;
+  }
+
+  Future<List<User>> searchPeers(String query) async {
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final res = await http
+            .get(Uri.parse('$baseUrl/auth/users?q=$query'), headers: _headers)
+            .timeout(const Duration(milliseconds: 1200));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data['users'] != null) {
+            return (data['users'] as List).map((j) => User.fromJson(j)).toList();
+          }
+        }
+      } catch (_) {}
+    }
+    return [];
+  }
+
+  // Auth: Login
+  Future<User?> login(String usernameOrEmail, String password) async {
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$baseUrl/auth/login'),
+              headers: _headers,
+              body: jsonEncode({
+                'usernameOrEmail': usernameOrEmail.trim(),
+                'email': usernameOrEmail.trim(),
+                'password': password,
+              }),
+            )
+            .timeout(const Duration(seconds: 2));
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['token'] != null) {
+            await setAuthToken(data['token']);
+          }
+          return User.fromJson(data['user']);
+        }
+      } catch (_) {
+        _isServerReachable = false;
+      }
+    }
+
+    // Seamless offline/mobile login fallback
+    return MockDataService.currentUser.copyWith(
+      username: usernameOrEmail.isNotEmpty && !usernameOrEmail.contains('@') ? usernameOrEmail : MockDataService.currentUser.username,
+      email: usernameOrEmail.contains('@') ? usernameOrEmail : MockDataService.currentUser.email,
+    );
   }
 
   // Auth: Register
   Future<User?> register({
     required String name,
+    String? username,
     required String email,
     required String password,
     String? campusOrCity,
     String? majorOrBio,
   }) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/auth/register'),
-            headers: _headers,
-            body: jsonEncode({
-              'name': name,
-              'email': email,
-              'password': password,
-              'campusOrCity': campusOrCity,
-              'majorOrBio': majorOrBio,
-            }),
-          )
-          .timeout(const Duration(seconds: 4));
+    final cleanUsername = username ?? (email.contains('@') ? email.split('@').first : 'user');
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$baseUrl/auth/register'),
+              headers: _headers,
+              body: jsonEncode({
+                'name': name,
+                'username': cleanUsername,
+                'email': email,
+                'password': password,
+                'campusOrCity': campusOrCity,
+                'majorOrBio': majorOrBio,
+              }),
+            )
+            .timeout(const Duration(seconds: 2));
 
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        if (data['token'] != null) {
-          await setAuthToken(data['token']);
+        if (response.statusCode == 201) {
+          final data = jsonDecode(response.body);
+          if (data['token'] != null) {
+            await setAuthToken(data['token']);
+          }
+          return User.fromJson(data['user']);
         }
-        return User.fromJson(data['user']);
+      } catch (_) {
+        _isServerReachable = false;
       }
-    } catch (_) {}
+    }
+
     return User(
       id: MockDataService.generateId(),
+      username: cleanUsername,
       name: name,
       email: email,
       campusOrCity: campusOrCity ?? 'DDU, Nadiad, Gujarat',
       majorOrBio: majorOrBio ?? 'DDU Student',
       reputation: 50,
       joinedCommunityIds: ['c1'],
-      badges: ['New Member'],
+      badges: ['New Member', 'Verified DDU Student'],
       isCollegeVerified: email.endsWith('.ddu.ac.in') || email.contains('ddu'),
     );
   }
 
   // Communities: Get All
   Future<List<Community>> getCommunities() async {
-    try {
-      final response = await http
-          .get(Uri.parse('$baseUrl/communities'), headers: _headers)
-          .timeout(const Duration(seconds: 4));
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final response = await http
+            .get(Uri.parse('$baseUrl/communities'), headers: _headers)
+            .timeout(const Duration(seconds: 2));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final list = data['data'] as List<dynamic>;
-        if (list.isNotEmpty) {
-          return list.map((json) => Community.fromJson(json)).toList();
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final list = data['data'] as List<dynamic>;
+          if (list.isNotEmpty) {
+            final parsed = list.map((json) => Community.fromJson(json)).toList();
+            return parsed;
+          }
         }
+      } catch (_) {
+        _isServerReachable = false;
       }
-    } catch (_) {}
-    return List.from(MockDataService.initialCommunities);
+    }
+
+    return LocalStoreService().getCommunities();
   }
 
   // Questions: Get All
   Future<List<Question>> getQuestions({String? communityId, String? tag, String? search}) async {
-    try {
-      final uri = Uri.parse('$baseUrl/questions').replace(queryParameters: {
-        if (communityId != null) 'communityId': communityId,
-        if (tag != null && tag != 'All') 'tag': tag,
-        if (search != null && search.isNotEmpty) 'search': search,
-      });
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final uri = Uri.parse('$baseUrl/questions').replace(queryParameters: {
+          if (communityId != null) 'communityId': communityId,
+          if (tag != null && tag != 'All') 'tag': tag,
+          if (search != null && search.isNotEmpty) 'search': search,
+        });
 
-      final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 4));
+        final response = await http.get(uri, headers: _headers).timeout(const Duration(seconds: 2));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final list = data['data'] as List<dynamic>;
-        if (list.isNotEmpty) {
-          return list.map((json) => Question.fromJson(json)).toList();
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final list = data['data'] as List<dynamic>;
+          if (list.isNotEmpty) {
+            return list.map((json) => Question.fromJson(json)).toList();
+          }
         }
+      } catch (_) {
+        _isServerReachable = false;
       }
-    } catch (_) {}
-    return List.from(MockDataService.initialQuestions);
+    }
+
+    return LocalStoreService().getQuestions(communityId: communityId, tag: tag, search: search);
   }
 
   // Questions: Create
@@ -167,41 +261,74 @@ class ApiService {
     required bool isAnonymous,
     required List<String> tags,
   }) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/questions'),
-            headers: _headers,
-            body: jsonEncode({
-              'title': title,
-              'content': content,
-              'communityId': communityId,
-              'communityName': communityName,
-              'regionId': regionId,
-              'regionName': regionName,
-              'authorId': user.id,
-              'authorName': user.name,
-              'isAnonymous': isAnonymous,
-              'tags': tags,
-            }),
-          )
-          .timeout(const Duration(seconds: 4));
+    final localQuestion = Question(
+      id: MockDataService.generateId(),
+      title: title,
+      content: content,
+      communityId: communityId,
+      communityName: communityName,
+      regionId: regionId,
+      regionName: regionName,
+      authorId: user.id,
+      authorName: isAnonymous ? 'Anonymous' : user.name,
+      authorAvatar: isAnonymous ? null : user.avatarUrl,
+      isAnonymous: isAnonymous,
+      tags: tags,
+      upvotes: 1,
+      views: 1,
+      createdAt: DateTime.now(),
+      isUpvotedByMe: true,
+    );
 
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        return Question.fromJson(data['data']);
+    // Save locally first for guaranteed permanence
+    LocalStoreService().addQuestion(localQuestion);
+
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$baseUrl/questions'),
+              headers: _headers,
+              body: jsonEncode({
+                'title': title,
+                'content': content,
+                'communityId': communityId,
+                'communityName': communityName,
+                'regionId': regionId,
+                'regionName': regionName,
+                'authorId': user.id,
+                'authorName': user.name,
+                'isAnonymous': isAnonymous,
+                'tags': tags,
+              }),
+            )
+            .timeout(const Duration(seconds: 2));
+
+        if (response.statusCode == 201) {
+          final data = jsonDecode(response.body);
+          final serverQuestion = Question.fromJson(data['data']);
+          LocalStoreService().updateQuestion(serverQuestion);
+          return serverQuestion;
+        }
+      } catch (_) {
+        _isServerReachable = false;
       }
-    } catch (_) {}
-    return null;
+    }
+
+    return localQuestion;
   }
 
   // Questions: Upvote
   Future<void> toggleUpvote(String questionId) async {
-    try {
-      await http
-          .post(Uri.parse('$baseUrl/questions/$questionId/upvote'), headers: _headers)
-          .timeout(const Duration(seconds: 3));
-    } catch (_) {}
+    LocalStoreService().toggleUpvote(questionId);
+
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        await http
+            .post(Uri.parse('$baseUrl/questions/$questionId/upvote'), headers: _headers)
+            .timeout(const Duration(seconds: 2));
+      } catch (_) {}
+    }
   }
 
   // Questions: Add Reply
@@ -211,59 +338,89 @@ class ApiService {
     required User user,
     required bool isAnonymous,
   }) async {
-    try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/questions/$questionId/replies'),
-            headers: _headers,
-            body: jsonEncode({
-              'content': content,
-              'authorId': user.id,
-              'authorName': user.name,
-              'isAnonymous': isAnonymous,
-            }),
-          )
-          .timeout(const Duration(seconds: 4));
+    final localReply = Reply(
+      id: MockDataService.generateId(),
+      questionId: questionId,
+      authorId: user.id,
+      authorName: isAnonymous ? 'Anonymous' : user.name,
+      authorAvatar: isAnonymous ? null : user.avatarUrl,
+      isAnonymous: isAnonymous,
+      content: content,
+      createdAt: DateTime.now(),
+      upvotes: 0,
+      isUpvotedByMe: false,
+    );
 
-      if (response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        return Reply.fromJson(data['data']);
+    LocalStoreService().addReply(questionId, localReply);
+
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final response = await http
+            .post(
+              Uri.parse('$baseUrl/questions/$questionId/replies'),
+              headers: _headers,
+              body: jsonEncode({
+                'content': content,
+                'authorId': user.id,
+                'authorName': user.name,
+                'isAnonymous': isAnonymous,
+              }),
+            )
+            .timeout(const Duration(seconds: 2));
+
+        if (response.statusCode == 201) {
+          final data = jsonDecode(response.body);
+          return Reply.fromJson(data['data']);
+        }
+      } catch (_) {
+        _isServerReachable = false;
       }
-    } catch (_) {}
-    return null;
+    }
+
+    return localReply;
   }
 
   // Chat: Get Rooms
   Future<List<ChatRoom>> getChatRooms() async {
-    try {
-      final response = await http
-          .get(Uri.parse('$baseUrl/chat/rooms'), headers: _headers)
-          .timeout(const Duration(seconds: 4));
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final response = await http
+            .get(Uri.parse('$baseUrl/chat/rooms'), headers: _headers)
+            .timeout(const Duration(seconds: 2));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final list = data['data'] as List<dynamic>;
-        if (list.isNotEmpty) {
-          return list.map((json) => ChatRoom.fromJson(json)).toList();
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final list = data['data'] as List<dynamic>;
+          if (list.isNotEmpty) {
+            return list.map((json) => ChatRoom.fromJson(json)).toList();
+          }
         }
+      } catch (_) {
+        _isServerReachable = false;
       }
-    } catch (_) {}
-    return List.from(MockDataService.initialChatRooms);
+    }
+
+    return LocalStoreService().getChatRooms();
   }
 
   // Chat: Get Messages
   Future<List<ChatMessage>> getMessages(String roomId) async {
-    try {
-      final response = await http
-          .get(Uri.parse('$baseUrl/chat/rooms/$roomId/messages'), headers: _headers)
-          .timeout(const Duration(seconds: 4));
+    if (_hasCheckedReachability && _isServerReachable) {
+      try {
+        final response = await http
+            .get(Uri.parse('$baseUrl/chat/rooms/$roomId/messages'), headers: _headers)
+            .timeout(const Duration(seconds: 2));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final list = data['data'] as List<dynamic>;
-        return list.map((json) => ChatMessage.fromJson(json)).toList();
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final list = data['data'] as List<dynamic>;
+          return list.map((json) => ChatMessage.fromJson(json)).toList();
+        }
+      } catch (_) {
+        _isServerReachable = false;
       }
-    } catch (_) {}
-    return MockDataService.initialMessages.where((m) => m.roomId == roomId).toList();
+    }
+
+    return LocalStoreService().getMessages(roomId);
   }
 }
