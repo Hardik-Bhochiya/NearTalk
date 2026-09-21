@@ -494,6 +494,17 @@ class LocalStoreService {
     }
   }
 
+  void cancelFriendRequest(String senderUsername, String receiverUsername) {
+    final sUser = senderUsername.trim().toLowerCase().replaceAll('@', '');
+    final rUser = receiverUsername.trim().toLowerCase().replaceAll('@', '');
+    _friendRequests.removeWhere((r) =>
+        (r.senderUsername.trim().toLowerCase().replaceAll('@', '') == sUser &&
+         r.receiverUsername.trim().toLowerCase().replaceAll('@', '') == rUser) ||
+        (r.senderUsername.trim().toLowerCase().replaceAll('@', '') == rUser &&
+         r.receiverUsername.trim().toLowerCase().replaceAll('@', '') == sUser));
+    _persistFriendRequests();
+  }
+
   void removeFriend(String username1, String username2) {
     final u1 = username1.trim().toLowerCase().replaceAll('@', '');
     final u2 = username2.trim().toLowerCase().replaceAll('@', '');

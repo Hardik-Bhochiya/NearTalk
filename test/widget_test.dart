@@ -44,7 +44,7 @@ void main() {
     expect(find.text('Welcome, Hardik Bhochiya'), findsOneWidget);
     expect(find.text('@hardik_07'), findsOneWidget);
     expect(find.text('Friend Requests'), findsOneWidget);
-    expect(find.text('Suggested Communities by Location'), findsOneWidget);
+    expect(find.text('Suggested Communities'), findsOneWidget);
     expect(find.text('My Groups'), findsOneWidget);
   });
 }

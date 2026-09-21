@@ -15,6 +15,8 @@ import '../community/communities_screen.dart';
 import '../community/community_detail_screen.dart';
 import '../question/ask_question_screen.dart';
 import '../question/question_detail_screen.dart';
+import '../../providers/chat_provider.dart';
+import '../chat/chat_conversation_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -197,27 +199,32 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Text('💬', style: TextStyle(fontSize: 18)),
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'NearTalk',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFFF0F6FC),
-                    letterSpacing: -0.5,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'NearTalk',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFFF0F6FC),
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                Text(
-                  user != null ? '📍 ${user.campusOrCity}' : 'Location-Based Communities',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF8B949E),
+                  const Text(
+                    'Ask your community. Know your place.',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF8B949E),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -274,8 +281,8 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildFriendRequestsCard(pendingIncomingRequests),
             const SizedBox(height: 20),
 
-            // 4. Suggested Communities by Location (Mumbai, Ahmedabad, Dwarka, Nadiad)
-            _buildLocationCommunitiesSection(regions),
+            // 4. Suggested Communities
+            _buildLocationCommunitiesSection(allCommunities),
             const SizedBox(height: 20),
 
             // 5. My Groups Header & Carousel
@@ -556,81 +563,100 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
                 ),
                 const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text(
-                      targetUser.handle,
-                      style: const TextStyle(fontSize: 11.5, color: Color(0xFF58A6FF), fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '• 📍 ${targetUser.campusOrCity}',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF8B949E)),
-                    ),
-                  ],
+                Text(
+                  targetUser.handle,
+                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF58A6FF), fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$friendCount friends • $communityCount communities',
-                  style: const TextStyle(fontSize: 10.5, color: Color(0xFF8B949E)),
+                  targetUser.majorOrBio?.isNotEmpty == true
+                      ? targetUser.majorOrBio!
+                      : '$friendCount connections • $communityCount communities',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF8B949E)),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
           if (isFriend)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF238636).withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF238636)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_rounded, size: 14, color: Color(0xFF3FB950)),
-                  SizedBox(width: 4),
-                  Text(
-                    'Friends ✓',
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF3FB950)),
-                  ),
-                ],
-              ),
-            )
-          else if (incomingReq != null)
-            ElevatedButton(
-              onPressed: () => _handleAcceptFriendRequest(incomingReq),
+            ElevatedButton.icon(
+              onPressed: () {
+                final chatProvider = context.read<ChatProvider>();
+                final currentUser = auth.currentUser;
+                if (currentUser != null) {
+                  final room = chatProvider.startPersonalChat(peerUser: targetUser, currentUser: currentUser);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => ChatConversationScreen(roomId: room.id)),
+                  );
+                }
+              },
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
+              label: const Text('Message', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF238636),
-                foregroundColor: Colors.white,
+                backgroundColor: const Color(0xFF21262D),
+                foregroundColor: const Color(0xFF58A6FF),
+                side: const BorderSide(color: Color(0xFF30363D)),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text('Accept', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+            )
+          else if (incomingReq != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton(
+                  onPressed: () => _handleAcceptFriendRequest(incomingReq),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF238636),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Accept', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 6),
+                OutlinedButton(
+                  onPressed: () => _handleRejectFriendRequest(incomingReq),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF8B949E),
+                    side: const BorderSide(color: Color(0xFF30363D)),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Decline', style: TextStyle(fontSize: 11.5)),
+                ),
+              ],
             )
           else if (hasSentRequest)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF161B22),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF30363D)),
+            OutlinedButton(
+              onPressed: () async {
+                await auth.cancelFriendRequest(targetUser.username);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Cancelled request to @${targetUser.username}')),
+                  );
+                  setState(() {});
+                }
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFE3B341),
+                side: const BorderSide(color: Color(0xFFE3B341)),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              child: const Text(
-                'Request Sent',
-                style: TextStyle(fontSize: 11.5, color: Color(0xFF8B949E)),
-              ),
+              child: const Text('Requested ✕', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
             )
           else
             ElevatedButton.icon(
               onPressed: () => _handleSendFriendRequest(targetUser.username),
-              icon: const Icon(Icons.person_add_alt_1_rounded, size: 14),
-              label: const Text('Add Friend', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+              icon: const Icon(Icons.person_add_rounded, size: 14),
+              label: const Text('Follow', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF58A6FF),
+                backgroundColor: const Color(0xFF1F6FEB),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
@@ -673,8 +699,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${c.regionName} • ${c.memberCount} members',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8B949E)),
+                  '📍 ${c.locationSpot} • ${c.memberCount} members',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF58A6FF)),
                 ),
               ],
             ),
@@ -850,91 +876,198 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- 4. Suggested Communities by Location (Mumbai, Ahmedabad, Dwarka, Nadiad) ---
-  Widget _buildLocationCommunitiesSection(List<Region> regions) {
+  // --- 4. Suggested Communities ---
+  Widget _buildLocationCommunitiesSection(List<Community> communities) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(Icons.place_rounded, size: 18, color: Color(0xFF58A6FF)),
-            SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                'Suggested Communities by Location',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFFF0F6FC),
-                ),
+            const Expanded(
+              child: Row(
+                children: [
+                  Icon(Icons.explore_outlined, size: 18, color: Color(0xFF58A6FF)),
+                  SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Suggested Communities',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFFF0F6FC),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CommunitiesScreen(isTab: false)),
+                );
+              },
+              child: const Row(
+                children: [
+                  Text(
+                    'Explore all',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF58A6FF),
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF58A6FF)),
+                ],
               ),
             ),
           ],
         ),
         const SizedBox(height: 4),
         const Text(
-          'Explore general city locations (Dwarka, Mumbai, Ahmedabad, Nadiad)',
+          'Join campus and regional communities to connect with peers',
           style: TextStyle(fontSize: 12, color: Color(0xFF8B949E)),
         ),
         const SizedBox(height: 12),
 
-        // Grid of 4 Locations
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 2.1,
-          ),
-          itemCount: regions.length,
-          itemBuilder: (context, index) {
-            final reg = regions[index];
-            return InkWell(
-              onTap: () => _navigateToCityCommunities(reg),
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF161B22),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF30363D)),
-                ),
-                child: Row(
-                  children: [
-                    Text(reg.iconEmoji, style: const TextStyle(fontSize: 22)),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+        // Carousel of communities with Location strictly under Community Name
+        SizedBox(
+          height: 148,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: communities.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final c = communities[index];
+              final communityProvider = context.read<CommunityProvider>();
+
+              return InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => CommunityDetailScreen(communityId: c.id)),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 210,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161B22),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF30363D)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Text(
-                            reg.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFF0F6FC),
+                          Container(
+                            width: 34,
+                            height: 34,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF21262D),
+                              borderRadius: BorderRadius.circular(8),
                             ),
+                            child: Text(c.iconEmoji, style: const TextStyle(fontSize: 18)),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${reg.activeCommunitiesCount} Groups',
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF58A6FF), fontWeight: FontWeight.w600),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF21262D),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF30363D)),
+                            ),
+                            child: Text(
+                              c.category,
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF8B949E), fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF8B949E)),
-                  ],
+                      const SizedBox(height: 8),
+
+                      // Line 1: Community Name
+                      Text(
+                        c.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFF0F6FC),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+
+                      // Line 2: Directly under name - Location
+                      Row(
+                        children: [
+                          const Icon(Icons.place_rounded, size: 12, color: Color(0xFF58A6FF)),
+                          const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              c.locationSpot,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF58A6FF),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${c.memberCount} members',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 10.5, color: Color(0xFF8B949E)),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          InkWell(
+                            onTap: () => communityProvider.toggleJoinCommunity(c.id),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: c.isJoined ? const Color(0xFF21262D) : const Color(0xFF238636),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: c.isJoined ? const Color(0xFF30363D) : Colors.transparent,
+                                ),
+                              ),
+                              child: Text(
+                                c.isJoined ? 'Joined ✓' : 'Join +',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: c.isJoined ? const Color(0xFF3FB950) : Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ],
     );

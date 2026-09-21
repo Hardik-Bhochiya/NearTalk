@@ -406,16 +406,15 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> with SingleTicker
     final selectedRegion = communityProvider.selectedRegion ?? (regions.isNotEmpty ? regions.first : null);
     final joinedCommunities = communityProvider.joinedCommunities;
 
-    // Filter communities by selected city
-    final cityCommunities = communityProvider.communities.where((c) {
-      final matchesRegion = selectedRegion == null || c.regionId == selectedRegion.id || c.regionName == selectedRegion.name;
+    // Filter all communities across the app without forcing a single city
+    final exploreCommunities = communityProvider.communities.where((c) {
       final matchesCategory = communityProvider.selectedCategory == 'All' || c.category == communityProvider.selectedCategory;
       final query = communityProvider.searchQuery.toLowerCase();
       final matchesSearch = query.isEmpty ||
           c.name.toLowerCase().contains(query) ||
           c.description.toLowerCase().contains(query) ||
           c.locationSpot.toLowerCase().contains(query);
-      return matchesRegion && matchesCategory && matchesSearch;
+      return matchesCategory && matchesSearch;
     }).toList();
 
     return Scaffold(
@@ -467,7 +466,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> with SingleTicker
                     children: [
                       const Icon(Icons.explore_outlined, size: 16),
                       const SizedBox(width: 6),
-                      Text('Explore (${cityCommunities.length})'),
+                      Text('Explore (${exploreCommunities.length})'),
                     ],
                   ),
                 ),
@@ -488,61 +487,6 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> with SingleTicker
       ),
       body: Column(
         children: [
-          // 1. Prominent Location Dropdown Selector [ Mumbai ▼ ], [ Ahmedabad ▼ ], [ Dwarka ▼ ], [ Nadiad ▼ ]
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF161B22),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF30363D), width: 1.2),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.location_on_rounded, size: 20, color: Color(0xFF58A6FF)),
-                const SizedBox(width: 10),
-                const Text(
-                  'Location: ',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF8B949E)),
-                ),
-                Expanded(
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedRegion?.name ?? 'Mumbai',
-                      dropdownColor: const Color(0xFF21262D),
-                      style: const TextStyle(
-                        color: Color(0xFFF0F6FC),
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF58A6FF)),
-                      items: regions.map((r) {
-                        return DropdownMenuItem<String>(
-                          value: r.name,
-                          child: Row(
-                            children: [
-                              Text(r.iconEmoji, style: const TextStyle(fontSize: 16)),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${r.name} (${r.activeCommunitiesCount} Groups)',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          final reg = regions.firstWhere((r) => r.name == val);
-                          communityProvider.selectRegion(reg);
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
 
           // 2. Search Field
           Padding(
@@ -596,8 +540,8 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> with SingleTicker
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Tab 1: EXPLORE SELECTED CITY COMMUNITIES
-                cityCommunities.isEmpty
+                // Tab 1: EXPLORE COMMUNITIES
+                exploreCommunities.isEmpty
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.all(32),
@@ -613,17 +557,17 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> with SingleTicker
                                   border: Border.all(color: const Color(0xFF30363D)),
                                 ),
                                 child: const Center(
-                                  child: Text('🏙️', style: TextStyle(fontSize: 26)),
+                                  child: Text('💬', style: TextStyle(fontSize: 26)),
                                 ),
                               ),
                               const SizedBox(height: 14),
-                              Text(
-                                'No Communities in ${selectedRegion?.name ?? 'this city'} yet',
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
+                              const Text(
+                                'No Communities Found',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
                               ),
                               const SizedBox(height: 6),
                               const Text(
-                                'Be the first to create a community for this location!',
+                                'Be the first to create a community!',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(fontSize: 12.5, color: Color(0xFF8B949E)),
                               ),
@@ -645,9 +589,9 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> with SingleTicker
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        itemCount: cityCommunities.length,
+                        itemCount: exploreCommunities.length,
                         itemBuilder: (context, index) {
-                          final community = cityCommunities[index];
+                          final community = exploreCommunities[index];
                           final isCreator = community.creatorId == currentUserId;
                           return CommunityCard(
                             community: community,

@@ -343,6 +343,43 @@ class AuthProvider extends ChangeNotifier {
     return LocalStoreService().getPendingOutgoingRequests(_currentUser!.username);
   }
 
+  bool isPendingOutgoing(String targetUsername) {
+    if (_currentUser == null) return false;
+    final tUser = targetUsername.trim().toLowerCase().replaceAll('@', '');
+    final outgoing = getPendingOutgoingRequests();
+    return outgoing.any((r) => r.receiverUsername.trim().toLowerCase().replaceAll('@', '') == tUser && r.isPending);
+  }
+
+  bool isPendingIncoming(String targetUsername) {
+    if (_currentUser == null) return false;
+    final tUser = targetUsername.trim().toLowerCase().replaceAll('@', '');
+    final incoming = getPendingIncomingRequests();
+    return incoming.any((r) => r.senderUsername.trim().toLowerCase().replaceAll('@', '') == tUser && r.isPending);
+  }
+
+  FriendRequest? getIncomingRequestFrom(String targetUsername) {
+    if (_currentUser == null) return null;
+    final tUser = targetUsername.trim().toLowerCase().replaceAll('@', '');
+    final incoming = getPendingIncomingRequests();
+    try {
+      return incoming.firstWhere((r) => r.senderUsername.trim().toLowerCase().replaceAll('@', '') == tUser && r.isPending);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> cancelFriendRequest(String targetUsername) async {
+    if (_currentUser == null) return;
+    final tUser = targetUsername.trim().toLowerCase().replaceAll('@', '');
+    LocalStoreService().cancelFriendRequest(_currentUser!.username, tUser);
+    SocketService().cancelFriendRequest(
+      requestId: '',
+      senderUsername: _currentUser!.username,
+      receiverUsername: tUser,
+    );
+    notifyListeners();
+  }
+
   Future<bool> sendFriendRequest(String targetUsername) async {
     if (_currentUser == null) return false;
     final targetUser = findUserByUsername(targetUsername);

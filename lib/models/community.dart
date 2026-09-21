@@ -29,9 +29,11 @@ class Community {
     required this.bannerColorHex,
     this.isJoined = false,
     this.rules = const [
-      'Be respectful and helpful to all newcomers.',
-      'No spamming or self-promotion.',
-      'Keep questions relevant to this locality/topic.',
+      'Respect & Civility: Treat all members with dignity. No harassment, abusive words, or bullying.',
+      'Authentic Local Info: Keep questions and discussions genuine and relevant to this community.',
+      'No Spam or Ads: Commercial promotions, phishing links, and repetitive spam are strictly prohibited.',
+      'Privacy & Anonymity: Respect anonymity of posters. Never attempt to expose real identities.',
+      'Academic & Campus Integrity: Abide by student conduct guidelines and community safety standards.',
     ],
   });
 

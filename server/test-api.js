@@ -4,7 +4,7 @@ const runTests = async () => {
   const request = (path, method = 'GET', data = null) => {
     return new Promise((resolve, reject) => {
       const options = {
-        hostname: 'localhost',
+        hostname: '127.0.0.1',
         port: 5000,
         path,
         method,
@@ -64,6 +64,17 @@ const runTests = async () => {
     // 6. Chat Rooms
     const chatRooms = await request('/api/chat/rooms');
     console.log(`[Test] 6. GET /api/chat/rooms -> Status: ${chatRooms.status} (Count: ${chatRooms.body.count})`);
+
+    // 7. Search Users
+    const usersSearch = await request('/api/auth/users?q=');
+    console.log(`[Test] 7. GET /api/auth/users -> Status: ${usersSearch.status} (Count: ${usersSearch.body.count})`);
+
+    // 8. Cancel Friend Request Endpoint check
+    const cancelReq = await request('/api/friends/cancel', 'POST', {
+      senderUsername: 'test_user_1',
+      receiverUsername: 'test_user_2',
+    });
+    console.log(`[Test] 8. POST /api/friends/cancel -> Status: ${cancelReq.status} (Success: ${cancelReq.body.success})`);
 
     console.log('\n[Test] ALL BACKEND API TESTS PASSED SUCCESSFULLY! 🎉');
   } catch (err) {

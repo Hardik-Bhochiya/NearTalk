@@ -139,7 +139,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> with Sing
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '📍 ${community.regionName} • ${community.locationSpot} • ${community.memberCount} members',
+                        '📍 ${community.locationSpot} • ${community.memberCount} members',
                         style: const TextStyle(
                           fontSize: 11.5,
                           color: Color(0xFF8B949E),
@@ -330,26 +330,58 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> with Sing
                 ),
                 const SizedBox(height: 22),
 
-                // Community Rules Section
-                const Text(
-                  'Community Rules',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
+                // Community Rules & Regulations Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.gavel_rounded, color: Color(0xFF58A6FF), size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Rules & Regulations',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF238636).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF238636)),
+                      ),
+                      child: const Text('Enforced', style: TextStyle(fontSize: 10.5, color: Color(0xFF3FB950), fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 6),
+                const Text(
+                  'All members must abide by the following community standards to keep discussions respectful and reliable:',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF8B949E)),
+                ),
+                const SizedBox(height: 12),
                 ...community.rules.asMap().entries.map((entry) {
+                  final text = entry.value;
+                  final parts = text.split(':');
+                  final title = parts.length > 1 ? parts[0].trim() : 'Rule ${entry.key + 1}';
+                  final desc = parts.length > 1 ? parts.sublist(1).join(':').trim() : text;
+
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: const EdgeInsets.all(10),
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: const Color(0xFF161B22),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFF30363D)),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          width: 24,
+                          height: 24,
+                          alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: const Color(0xFF21262D),
                             borderRadius: BorderRadius.circular(6),
@@ -358,17 +390,35 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> with Sing
                           child: Text(
                             '${entry.key + 1}',
                             style: const TextStyle(
-                              fontSize: 11,
+                              fontSize: 11.5,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF58A6FF),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            entry.value,
-                            style: const TextStyle(fontSize: 12.5, color: Color(0xFFF0F6FC), height: 1.3),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFF0F6FC),
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                desc,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF8B949E),
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],

@@ -160,18 +160,22 @@ class SocketService {
   }
 
   void sendMessage({
+    String? id,
     required String roomId,
     required String content,
     required String senderId,
     required String senderName,
+    String? senderUsername,
     required bool isAnonymous,
   }) {
     if (disabledForTests || !_isConnected) return;
     _socket?.emit('send_message', {
+      if (id != null) 'id': id,
       'roomId': roomId,
       'content': content,
       'senderId': senderId,
       'senderName': senderName,
+      if (senderUsername != null) 'senderUsername': senderUsername,
       'isAnonymous': isAnonymous,
     });
   }
@@ -245,6 +249,19 @@ class SocketService {
     _socket?.emit('respond_friend_request', {
       'requestId': requestId,
       'status': status,
+      'senderUsername': senderUsername,
+      'receiverUsername': receiverUsername,
+    });
+  }
+
+  void cancelFriendRequest({
+    required String requestId,
+    required String senderUsername,
+    required String receiverUsername,
+  }) {
+    if (disabledForTests || !_isConnected) return;
+    _socket?.emit('cancel_friend_request', {
+      'requestId': requestId,
       'senderUsername': senderUsername,
       'receiverUsername': receiverUsername,
     });

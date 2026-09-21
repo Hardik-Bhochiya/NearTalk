@@ -33,9 +33,9 @@ const registerChatSocket = (io) => {
       });
     });
 
-    socket.on('send_message', ({ roomId, content, senderId, senderName, isAnonymous }) => {
+    socket.on('send_message', ({ id, roomId, content, senderId, senderName, isAnonymous, senderUsername }) => {
       const newMessage = {
-        id: uuidv4(),
+        id: id || uuidv4(),
         roomId,
         senderId: senderId || 'user-hardik',
         senderName: isAnonymous ? 'Anonymous' : senderName || 'Hardik',
@@ -51,7 +51,13 @@ const registerChatSocket = (io) => {
       };
 
       if (!store.messages[roomId]) store.messages[roomId] = [];
-      store.messages[roomId].push(newMessage);
+      // Deduplicate in store as well
+      const existingIdx = store.messages[roomId].findIndex((m) => m.id === newMessage.id);
+      if (existingIdx === -1) {
+        store.messages[roomId].push(newMessage);
+      } else {
+        store.messages[roomId][existingIdx] = newMessage;
+      }
 
       const room = store.rooms.find((r) => r.id === roomId);
       if (room) {
@@ -59,14 +65,17 @@ const registerChatSocket = (io) => {
         room.lastMessageTime = newMessage.timestamp;
       }
 
-      // Broadcast to room
-      chatNamespace.to(roomId).emit('receive_message', newMessage);
+      // Broadcast to other clients in the room (excluding sender socket to prevent duplicate appearance)
+      socket.to(roomId).emit('receive_message', newMessage);
 
-      // If DM, also broadcast to participant user channels
+      // If DM, notify recipient user channel so they see incoming message if not currently inside the room
       if (roomId.startsWith('dm-')) {
         const parts = roomId.replace('dm-', '').split('_');
+        const sHandle = (senderUsername || senderName || '').toLowerCase().replace('@', '');
         for (const userHandle of parts) {
-          chatNamespace.to(`user-${userHandle.toLowerCase()}`).emit('receive_message', newMessage);
+          if (userHandle.toLowerCase() !== sHandle) {
+            socket.to(`user-${userHandle.toLowerCase()}`).emit('receive_message', newMessage);
+          }
         }
       }
     });

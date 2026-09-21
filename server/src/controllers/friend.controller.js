@@ -85,9 +85,29 @@ exports.getFriendRequests = (req, res) => {
   res.json({ requests });
 };
 
+exports.cancelFriendRequest = (req, res) => {
+  const { requestId, senderUsername, receiverUsername } = req.body;
+  const sUser = (senderUsername || '').trim().toLowerCase().replaceAll('@', '');
+  const rUser = (receiverUsername || '').trim().toLowerCase().replaceAll('@', '');
+
+  const idx = store.friendRequests.findIndex(
+    (r) =>
+      r.id === requestId ||
+      (r.senderUsername.toLowerCase() === sUser && r.receiverUsername.toLowerCase() === rUser)
+  );
+
+  if (idx !== -1) {
+    const [removed] = store.friendRequests.splice(idx, 1);
+    return res.json({ success: true, message: 'Friend request cancelled', request: removed });
+  }
+
+  return res.status(404).json({ success: false, message: 'Friend request not found' });
+};
+
 exports.getFriends = (req, res) => {
   const username = req.params.username.trim().toLowerCase().replaceAll('@', '');
   const friendUsernames = store.friends[username] ? Array.from(store.friends[username]) : [];
   const friendUsers = store.users.filter((u) => friendUsernames.includes(u.username.toLowerCase()));
   res.json({ friends: friendUsers });
 };
+

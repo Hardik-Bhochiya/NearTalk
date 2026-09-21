@@ -45,9 +45,19 @@ class ChatProvider extends ChangeNotifier {
         _messages[msg.roomId] = [];
       }
 
-      // Avoid duplicates
-      final existingIdx = _messages[msg.roomId]!.indexWhere((m) => m.id == msg.id);
-      if (existingIdx != -1) return;
+      // Robust deduplication: check ID and identical content from sender within 5s
+      final existingIdx = _messages[msg.roomId]!.indexWhere((m) =>
+          m.id == msg.id ||
+          (m.senderId == msg.senderId &&
+              m.content == msg.content &&
+              m.timestamp.difference(msg.timestamp).abs().inSeconds < 5));
+      if (existingIdx != -1) {
+        // If message already exists (e.g. sent optimistically), sync without duplicating
+        _messages[msg.roomId]![existingIdx] = msg;
+        LocalStoreService().addMessage(msg);
+        notifyListeners();
+        return;
+      }
 
       _messages[msg.roomId]!.add(msg);
       LocalStoreService().addMessage(msg);
@@ -488,10 +498,12 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
 
     SocketService().sendMessage(
+      id: newMsg.id,
       roomId: roomId,
       content: content,
       senderId: currentUser.id,
       senderName: isAnonymous ? 'Anonymous' : currentUser.name,
+      senderUsername: currentUser.username,
       isAnonymous: isAnonymous,
     );
 

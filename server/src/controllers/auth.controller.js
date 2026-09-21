@@ -267,3 +267,36 @@ exports.getMe = async (req, res) => {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
+exports.getUsers = async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim().toLowerCase().replace(/^@/, '');
+    if (isConnected()) {
+      const filter = q
+        ? {
+            $or: [
+              { username: { $regex: q, $options: 'i' } },
+              { name: { $regex: q, $options: 'i' } },
+            ],
+          }
+        : {};
+      const users = await User.find(filter).select('-password').limit(20);
+      return res.json({ success: true, users });
+    } else {
+      let filtered = store.users;
+      if (q) {
+        filtered = store.users.filter((u) => {
+          return (
+            (u.username && u.username.toLowerCase().includes(q)) ||
+            (u.name && u.name.toLowerCase().includes(q))
+          );
+        });
+      }
+      const safeUsers = filtered.map(({ password, ...u }) => u);
+      return res.json({ success: true, users: safeUsers });
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+

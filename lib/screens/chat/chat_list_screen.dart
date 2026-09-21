@@ -574,43 +574,72 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 },
                               )
                             : (isOutgoingPending
-                                ? Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF21262D),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFF30363D)),
+                                ? OutlinedButton(
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFFE3B341),
+                                      side: const BorderSide(color: Color(0xFFE3B341)),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
-                                    child: const Text('Requested ⏳', style: TextStyle(color: Color(0xFFE3B341), fontSize: 12, fontWeight: FontWeight.bold)),
+                                    onPressed: () async {
+                                      await auth.cancelFriendRequest(peer.username);
+                                      setModalState(() {});
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Cancelled request to @${peer.username}')),
+                                        );
+                                      }
+                                    },
+                                    child: const Text('Requested ✕', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                   )
                                 : (isIncomingPending
-                                    ? ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF238636),
-                                          foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        ),
-                                        onPressed: () {
-                                          final req = pendingIncoming.firstWhere((r) => r.senderUsername.toLowerCase() == peer.username.toLowerCase());
-                                          auth.respondFriendRequest(req.id, 'accepted');
-                                          setModalState(() {});
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Accepted @${peer.username}! 🎉'), backgroundColor: const Color(0xFF238636)),
-                                          );
-                                        },
-                                        child: const Text('Accept', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFF238636),
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            onPressed: () {
+                                              final req = pendingIncoming.firstWhere((r) => r.senderUsername.toLowerCase() == peer.username.toLowerCase());
+                                              auth.respondFriendRequest(req.id, 'accepted');
+                                              setModalState(() {});
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('Accepted @${peer.username}! 🎉'), backgroundColor: const Color(0xFF238636)),
+                                              );
+                                            },
+                                            child: const Text('Accept', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          OutlinedButton(
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: const Color(0xFF8B949E),
+                                              side: const BorderSide(color: Color(0xFF30363D)),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            onPressed: () {
+                                              final req = pendingIncoming.firstWhere((r) => r.senderUsername.toLowerCase() == peer.username.toLowerCase());
+                                              auth.respondFriendRequest(req.id, 'declined');
+                                              setModalState(() {});
+                                            },
+                                            child: const Text('Decline', style: TextStyle(fontSize: 12)),
+                                          ),
+                                        ],
                                       )
                                     : ElevatedButton.icon(
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF238636),
+                                          backgroundColor: const Color(0xFF1F6FEB),
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                         ),
                                         icon: const Icon(Icons.person_add_rounded, size: 14),
-                                        label: const Text('Add Friend'),
+                                        label: const Text('Follow'),
                                         onPressed: () async {
                                           await auth.sendFriendRequest(peer.username);
                                           setModalState(() {});

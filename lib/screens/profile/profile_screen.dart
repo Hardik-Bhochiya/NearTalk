@@ -364,17 +364,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       color: Color(0xFFF0F6FC),
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      const Icon(Icons.place_rounded, size: 14, color: Color(0xFF58A6FF)),
-                      const SizedBox(width: 4),
-                      Text(
-                        user.campusOrCity,
-                        style: const TextStyle(fontSize: 12.5, color: Color(0xFF8B949E), fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
                   if (user.majorOrBio != null && user.majorOrBio!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
