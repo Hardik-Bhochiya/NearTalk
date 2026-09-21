@@ -274,7 +274,23 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF8B949E)),
+            icon: const Icon(Icons.call_outlined, color: Color(0xFFF0F6FC), size: 22),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Starting audio call... 📞'), backgroundColor: Color(0xFF238636)),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.videocam_outlined, color: Color(0xFFF0F6FC), size: 24),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Starting video call... 📹'), backgroundColor: Color(0xFF238636)),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF8B949E), size: 22),
             onPressed: () => _showRoomDetailsModal(context, room),
           ),
           const SizedBox(width: 4),
@@ -382,11 +398,11 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             ),
           ),
 
-          // Input Bar with Attachment, Voice/Send, and Anon toggle
+          // Instagram DM Input Bar
           Container(
             padding: EdgeInsets.only(
               left: 10,
-              right: 10,
+              right: 12,
               top: 8,
               bottom: MediaQuery.of(context).viewInsets.bottom + 8,
             ),
@@ -397,92 +413,106 @@ class _ChatConversationScreenState extends State<ChatConversationScreen> {
             child: SafeArea(
               child: Row(
                 children: [
-                  // Attachment (+) button
-                  IconButton(
-                    icon: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF58A6FF), size: 24),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => ChatAttachmentSheet.show(context, _handleAttachment),
-                  ),
-                  const SizedBox(width: 6),
-
-                  // Anonymous toggle icon button
-                  IconButton(
-                    icon: Icon(
-                      _isAnonymousChat ? Icons.masks_rounded : Icons.masks_outlined,
-                      color: _isAnonymousChat ? const Color(0xFFF0883E) : const Color(0xFF8B949E),
-                      size: 22,
+                  // Instagram Blue Camera Button
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1F6FEB),
+                      shape: BoxShape.circle,
                     ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Toggle Anonymous Mode',
-                    onPressed: () {
-                      setState(() => _isAnonymousChat = !_isAnonymousChat);
-                    },
+                    child: IconButton(
+                      icon: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
+                      padding: EdgeInsets.zero,
+                      onPressed: () => _handleAttachment('photo', 'Campus Photo'),
+                    ),
                   ),
                   const SizedBox(width: 8),
 
-                  // Text Field
+                  // Text Field Pill
                   Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: _isAnonymousChat ? 'Message anonymously...' : 'Type a message...',
-                        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFF8B949E)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: const BorderSide(color: Color(0xFF30363D)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: const BorderSide(color: Color(0xFF30363D)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: const BorderSide(color: Color(0xFF58A6FF)),
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFF0D1117),
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Send or Mic Voice Button - High Contrast Visible Button
-                  InkWell(
-                    onTap: () {
-                      if (_isTypingText) {
-                        _sendMessage();
-                      } else {
-                        _handleAttachment('audio', 'Voice note');
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(20),
                     child: Container(
-                      width: 40,
-                      height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF238636), // High contrast GitHub Green
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0x33FFFFFF), width: 1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF238636).withValues(alpha: 0.4),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                        color: const Color(0xFF21262D),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: const Color(0xFF30363D)),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _messageController,
+                              style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 14),
+                              decoration: InputDecoration(
+                                hintText: _isAnonymousChat ? 'Message anonymously...' : 'Message...',
+                                hintStyle: const TextStyle(fontSize: 13.5, color: Color(0xFF8B949E)),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                              ),
+                              onSubmitted: (_) => _sendMessage(),
+                            ),
+                          ),
+                          // Anonymous Mask Icon
+                          IconButton(
+                            icon: Icon(
+                              _isAnonymousChat ? Icons.masks_rounded : Icons.masks_outlined,
+                              color: _isAnonymousChat ? const Color(0xFFF0883E) : const Color(0xFF8B949E),
+                              size: 20,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            tooltip: 'Toggle Anonymous Mode',
+                            onPressed: () {
+                              setState(() => _isAnonymousChat = !_isAnonymousChat);
+                            },
                           ),
                         ],
                       ),
-                      child: Icon(
-                        _isTypingText ? Icons.send_rounded : Icons.mic_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+
+                  // Trailing Instagram DM Actions: Send button OR Mic, Gallery, and Quick Heart
+                  if (_isTypingText)
+                    TextButton(
+                      onPressed: () => _sendMessage(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        minimumSize: const Size(40, 36),
+                      ),
+                      child: const Text(
+                        'Send',
+                        style: TextStyle(
+                          color: Color(0xFF58A6FF),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14.5,
+                        ),
+                      ),
+                    )
+                  else ...[
+                    IconButton(
+                      icon: const Icon(Icons.mic_none_rounded, color: Color(0xFFF0F6FC), size: 22),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => _handleAttachment('audio', 'Voice note'),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.image_outlined, color: Color(0xFFF0F6FC), size: 22),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => ChatAttachmentSheet.show(context, _handleAttachment),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.favorite_rounded, color: Color(0xFFF85149), size: 23),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => _sendMessage('❤️'),
+                    ),
+                  ],
                 ],
               ),
             ),

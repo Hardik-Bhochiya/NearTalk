@@ -8,15 +8,12 @@ import '../../models/community.dart';
 import '../../models/question.dart';
 import '../../models/user.dart';
 import '../../models/friend_request.dart';
-import '../../models/region.dart';
 import '../../widgets/notifications_sheet.dart';
 import '../../widgets/post_options_sheet.dart';
 import '../community/communities_screen.dart';
 import '../community/community_detail_screen.dart';
 import '../question/ask_question_screen.dart';
 import '../question/question_detail_screen.dart';
-import '../../providers/chat_provider.dart';
-import '../chat/chat_conversation_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,14 +23,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _searchController = TextEditingController();
   final _quickQuestionController = TextEditingController();
-  String _universalSearchQuery = '';
   bool _isAnonymousFeedMode = false; // false = Main, true = Anonymous
 
   @override
   void dispose() {
-    _searchController.dispose();
     _quickQuestionController.dispose();
     super.dispose();
   }
@@ -85,29 +79,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _handleSendFriendRequest(String username) async {
-    final auth = context.read<AuthProvider>();
-    final success = await auth.sendFriendRequest(username);
-    if (!mounted) return;
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Friend request sent to @$username! 🤝'),
-          backgroundColor: const Color(0xFF238636),
-        ),
-      );
-      setState(() {});
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not send friend request to @$username.'),
-          backgroundColor: const Color(0xFFF85149),
-        ),
-      );
-    }
-  }
-
   void _handleAcceptFriendRequest(FriendRequest req) async {
     final auth = context.read<AuthProvider>();
     await auth.respondFriendRequest(req.id, 'accepted');
@@ -136,12 +107,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {});
   }
 
-  void _navigateToCityCommunities(Region region) {
-    context.read<CommunityProvider>().selectRegion(region);
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CommunitiesScreen(isTab: false)),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -152,30 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final user = auth.currentUser;
     final joinedCommunities = communityProvider.joinedCommunities;
-    final allCommunities = communityProvider.communities;
-    final regions = communityProvider.regions;
     final pendingIncomingRequests = auth.getPendingIncomingRequests();
-
-    // Universal search filtering
-    final query = _universalSearchQuery.trim().toLowerCase().replaceAll('@', '');
-    List<User> matchedUsers = [];
-    List<Community> matchedCommunities = [];
-
-    if (query.isNotEmpty) {
-      matchedUsers = auth.knownUsers.where((u) {
-        if (user != null && u.id == user.id) return false;
-        return u.username.toLowerCase().contains(query) ||
-            u.name.toLowerCase().contains(query) ||
-            u.campusOrCity.toLowerCase().contains(query);
-      }).toList();
-
-      matchedCommunities = allCommunities.where((c) {
-        return c.name.toLowerCase().contains(query) ||
-            c.category.toLowerCase().contains(query) ||
-            c.regionName.toLowerCase().contains(query) ||
-            c.description.toLowerCase().contains(query);
-      }).toList();
-    }
 
     final questions = _isAnonymousFeedMode
         ? questionProvider.anonymousQuestions
@@ -229,6 +171,37 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          // Friend Requests Icon (placed near notification button like other apps)
+          Stack(
+            alignment: Alignment.topRight,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.person_add_outlined, size: 24),
+                color: const Color(0xFFF0F6FC),
+                tooltip: 'Friend Requests',
+                onPressed: () => _showFriendRequestsSheet(context),
+              ),
+              if (pendingIncomingRequests.isNotEmpty)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF85149),
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${pendingIncomingRequests.length}',
+                      style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          // Notification Icon
           Stack(
             alignment: Alignment.topRight,
             children: [
@@ -263,37 +236,19 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Personalized User Welcome Card
+            // 1. Personalized User Welcome Card (Greeting section)
             _buildWelcomeCard(user),
             const SizedBox(height: 16),
 
-            // 2. Universal Search Bar
-            _buildUniversalSearchBar(),
-            const SizedBox(height: 16),
-
-            // Search Results Section (if active search query)
-            if (_universalSearchQuery.isNotEmpty) ...[
-              _buildSearchResultsSection(matchedUsers, matchedCommunities, auth),
-              const SizedBox(height: 20),
-            ],
-
-            // 3. Friend Requests Card (Always visible on Home dashboard)
-            _buildFriendRequestsCard(pendingIncomingRequests),
-            const SizedBox(height: 20),
-
-            // 4. Suggested Communities
-            _buildLocationCommunitiesSection(allCommunities),
-            const SizedBox(height: 20),
-
-            // 5. My Groups Header & Carousel
+            // 2. My Groups Section (Horizontal WhatsApp-style list placed directly under greeting section)
             _buildMyGroupsSection(joinedCommunities),
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
 
-            // 6. Ask Question Box (High visibility GitHub green)
+            // 3. Ask Question Box (High visibility GitHub green)
             _buildAskQuestionBox(user),
             const SizedBox(height: 20),
 
-            // 7. Campus Discussions (Main vs Anonymous)
+            // 4. Campus Discussions (Main vs Anonymous)
             _buildDiscussionsSection(questions),
             const SizedBox(height: 40),
           ],
@@ -383,528 +338,220 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- 2. Universal Search Bar ---
-  Widget _buildUniversalSearchBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: _universalSearchQuery.isNotEmpty ? const Color(0xFF58A6FF) : const Color(0xFF30363D),
-          width: 1.2,
-        ),
+  // --- Friend Requests Bottom Sheet (Opened from AppBar action icon) ---
+  void _showFriendRequestsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF161B22),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
-        children: [
-          const Icon(Icons.search_rounded, size: 20, color: Color(0xFF58A6FF)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Color(0xFFF0F6FC), fontSize: 13.5),
-              decoration: const InputDecoration(
-                hintText: 'Search users, communities... 🔍',
-                hintStyle: TextStyle(color: Color(0xFF8B949E), fontSize: 13),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 12),
+      builder: (ctx) {
+        return Consumer<AuthProvider>(
+          builder: (context, auth, _) {
+            final requests = auth.getPendingIncomingRequests();
+            return Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.65,
               ),
-              onChanged: (val) {
-                setState(() {
-                  _universalSearchQuery = val;
-                });
-              },
-            ),
-          ),
-          if (_universalSearchQuery.isNotEmpty)
-            InkWell(
-              onTap: () {
-                setState(() {
-                  _searchController.clear();
-                  _universalSearchQuery = '';
-                });
-              },
-              child: const Icon(Icons.close_rounded, size: 18, color: Color(0xFF8B949E)),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // --- Search Results Section ---
-  Widget _buildSearchResultsSection(
-    List<User> matchedUsers,
-    List<Community> matchedCommunities,
-    AuthProvider auth,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF30363D)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Search Results for "$_universalSearchQuery"',
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFF0F6FC),
-                ),
-              ),
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    _searchController.clear();
-                    _universalSearchQuery = '';
-                  });
-                },
-                child: const Text(
-                  'Clear',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF58A6FF), fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Matching Users
-          if (matchedUsers.isNotEmpty) ...[
-            const Row(
-              children: [
-                Icon(Icons.person_search_rounded, size: 16, color: Color(0xFF58A6FF)),
-                SizedBox(width: 6),
-                Text(
-                  'People / Users',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8B949E)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ...matchedUsers.map((targetUser) => _buildUserSearchResultCard(targetUser, auth)),
-            const SizedBox(height: 12),
-          ],
-
-          // Matching Communities
-          if (matchedCommunities.isNotEmpty) ...[
-            const Row(
-              children: [
-                Icon(Icons.groups_rounded, size: 16, color: Color(0xFF58A6FF)),
-                SizedBox(width: 6),
-                Text(
-                  'Communities',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF8B949E)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ...matchedCommunities.map((c) => _buildCommunitySearchResultCard(c)),
-          ],
-
-          if (matchedUsers.isEmpty && matchedCommunities.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: Text(
-                  'No users or communities found for this query.',
-                  style: TextStyle(fontSize: 12.5, color: Color(0xFF8B949E)),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // User Profile Card in Search Result
-  Widget _buildUserSearchResultCard(User targetUser, AuthProvider auth) {
-    final isFriend = auth.areFriends(targetUser.username);
-    final outgoing = auth.getPendingOutgoingRequests();
-    final hasSentRequest = outgoing.any(
-      (r) => r.receiverUsername.toLowerCase() == targetUser.username.toLowerCase(),
-    );
-    final incoming = auth.getPendingIncomingRequests();
-    final incomingReq = incoming.cast<FriendRequest?>().firstWhere(
-          (r) => r?.senderUsername.toLowerCase() == targetUser.username.toLowerCase(),
-          orElse: () => null,
-        );
-
-    // Approximate stats for display
-    final communityCount = targetUser.joinedCommunityIds.length;
-    final friendCount = targetUser.username == 'rahul123' ? 2 : 1;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF21262D),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF30363D)),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: const Color(0xFF161B22),
-            child: Text(targetUser.avatarUrl ?? '👤', style: const TextStyle(fontSize: 18)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  targetUser.name,
-                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  targetUser.handle,
-                  style: const TextStyle(fontSize: 11.5, color: Color(0xFF58A6FF), fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  targetUser.majorOrBio?.isNotEmpty == true
-                      ? targetUser.majorOrBio!
-                      : '$friendCount connections • $communityCount communities',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8B949E)),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          if (isFriend)
-            ElevatedButton.icon(
-              onPressed: () {
-                final chatProvider = context.read<ChatProvider>();
-                final currentUser = auth.currentUser;
-                if (currentUser != null) {
-                  final room = chatProvider.startPersonalChat(peerUser: targetUser, currentUser: currentUser);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => ChatConversationScreen(roomId: room.id)),
-                  );
-                }
-              },
-              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
-              label: const Text('Message', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF21262D),
-                foregroundColor: const Color(0xFF58A6FF),
-                side: const BorderSide(color: Color(0xFF30363D)),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            )
-          else if (incomingReq != null)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ElevatedButton(
-                  onPressed: () => _handleAcceptFriendRequest(incomingReq),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF238636),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Accept', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
-                ),
-                const SizedBox(width: 6),
-                OutlinedButton(
-                  onPressed: () => _handleRejectFriendRequest(incomingReq),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF8B949E),
-                    side: const BorderSide(color: Color(0xFF30363D)),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Decline', style: TextStyle(fontSize: 11.5)),
-                ),
-              ],
-            )
-          else if (hasSentRequest)
-            OutlinedButton(
-              onPressed: () async {
-                await auth.cancelFriendRequest(targetUser.username);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Cancelled request to @${targetUser.username}')),
-                  );
-                  setState(() {});
-                }
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFE3B341),
-                side: const BorderSide(color: Color(0xFFE3B341)),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Requested ✕', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
-            )
-          else
-            ElevatedButton.icon(
-              onPressed: () => _handleSendFriendRequest(targetUser.username),
-              icon: const Icon(Icons.person_add_rounded, size: 14),
-              label: const Text('Follow', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1F6FEB),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // Community Card in Search Result
-  Widget _buildCommunitySearchResultCard(Community c) {
-    final communityProvider = context.read<CommunityProvider>();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF21262D),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF30363D)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: Color(c.bannerColorHex),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(c.iconEmoji, style: const TextStyle(fontSize: 18)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  c.name,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '📍 ${c.locationSpot} • ${c.memberCount} members',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF58A6FF)),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              communityProvider.toggleJoinCommunity(c.id);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: c.isJoined ? const Color(0xFF21262D) : const Color(0xFF238636),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: c.isJoined ? const Color(0xFF30363D) : Colors.transparent),
-              ),
-            ),
-            child: Text(
-              c.isJoined ? 'Joined ✓' : 'Join',
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.bold,
-                color: c.isJoined ? const Color(0xFF3FB950) : Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- 3. Friend Requests Card (Dashboard) ---
-  Widget _buildFriendRequestsCard(List<FriendRequest> requests) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: requests.isNotEmpty ? const Color(0xFF58A6FF).withValues(alpha: 0.5) : const Color(0xFF30363D),
-          width: 1.2,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.people_alt_rounded, size: 18, color: Color(0xFF58A6FF)),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Friend Requests',
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFF0F6FC),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: requests.isNotEmpty ? const Color(0xFF238636) : const Color(0xFF21262D),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF30363D)),
-                ),
-                child: Text(
-                  '${requests.length} pending',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: requests.isNotEmpty ? Colors.white : const Color(0xFF8B949E),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          if (requests.isEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0D1117),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF21262D)),
-              ),
-              child: const Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.mark_email_read_outlined, size: 16, color: Color(0xFF8B949E)),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'No pending requests. Use search to find classmates by @username!',
-                      style: TextStyle(fontSize: 11.5, color: Color(0xFF8B949E)),
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF30363D),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ],
-              ),
-            )
-          else
-            ...requests.map((req) {
-              return Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF21262D),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF30363D)),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: const Color(0xFF161B22),
-                      child: Text(req.senderAvatar ?? '👤', style: const TextStyle(fontSize: 16)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
                         children: [
+                          Icon(Icons.people_alt_rounded, size: 20, color: Color(0xFF58A6FF)),
+                          SizedBox(width: 8),
                           Text(
-                            req.senderName,
-                            style: const TextStyle(
-                              fontSize: 13,
+                            'Friend Requests',
+                            style: TextStyle(
+                              fontSize: 17,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFFF0F6FC),
                             ),
                           ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: requests.isNotEmpty ? const Color(0xFF238636) : const Color(0xFF21262D),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF30363D)),
+                        ),
+                        child: Text(
+                          '${requests.length} pending',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: requests.isNotEmpty ? Colors.white : const Color(0xFF8B949E),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (requests.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0D1117),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF21262D)),
+                      ),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.mark_email_read_outlined, size: 32, color: Color(0xFF8B949E)),
+                          SizedBox(height: 10),
                           Text(
-                            '@${req.senderUsername}',
-                            style: const TextStyle(fontSize: 11.5, color: Color(0xFF58A6FF)),
+                            'No pending friend requests',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Use Search tab to find and connect with classmates!',
+                            style: TextStyle(fontSize: 12, color: Color(0xFF8B949E)),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    ElevatedButton(
-                      onPressed: () => _handleAcceptFriendRequest(req),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF238636),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    )
+                  else
+                    Expanded(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: requests.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (ctx, index) {
+                          final req = requests[index];
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF21262D),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF30363D)),
+                            ),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 20,
+                                  backgroundColor: const Color(0xFF161B22),
+                                  child: Text(req.senderAvatar ?? '👤', style: const TextStyle(fontSize: 18)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        req.senderName,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFF0F6FC),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '@${req.senderUsername}',
+                                        style: const TextStyle(fontSize: 12, color: Color(0xFF58A6FF)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                ElevatedButton(
+                                  onPressed: () => _handleAcceptFriendRequest(req),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF238636),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  child: const Text('Accept', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                ),
+                                const SizedBox(width: 6),
+                                OutlinedButton(
+                                  onPressed: () => _handleRejectFriendRequest(req),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFFF85149),
+                                    side: const BorderSide(color: Color(0xFF30363D)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  child: const Text('Decline', style: TextStyle(fontSize: 12)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                      child: const Text('Accept', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                     ),
-                    const SizedBox(width: 6),
-                    OutlinedButton(
-                      onPressed: () => _handleRejectFriendRequest(req),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFF85149),
-                        side: const BorderSide(color: Color(0xFF30363D)),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text('Reject', style: TextStyle(fontSize: 11)),
-                    ),
-                  ],
-                ),
-              );
-            }),
-        ],
-      ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
-  // --- 4. Suggested Communities ---
-  Widget _buildLocationCommunitiesSection(List<Community> communities) {
+  // --- 2. My Groups Section (WhatsApp-style horizontal rows directly under greeting) ---
+  Widget _buildMyGroupsSection(List<Community> joinedCommunities) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Expanded(
-              child: Row(
-                children: [
-                  Icon(Icons.explore_outlined, size: 18, color: Color(0xFF58A6FF)),
-                  SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      'Suggested Communities',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFFF0F6FC),
-                      ),
-                    ),
+            Row(
+              children: [
+                const Icon(Icons.groups_rounded, size: 18, color: Color(0xFF58A6FF)),
+                const SizedBox(width: 8),
+                const Text(
+                  'My Groups',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFFF0F6FC),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF21262D),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF30363D)),
+                  ),
+                  child: Text(
+                    '${joinedCommunities.length}',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF58A6FF)),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
             InkWell(
               onTap: () {
                 Navigator.of(context).push(
@@ -915,208 +562,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     'Explore all',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF58A6FF),
-                    ),
-                  ),
-                  Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF58A6FF)),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Join campus and regional communities to connect with peers',
-          style: TextStyle(fontSize: 12, color: Color(0xFF8B949E)),
-        ),
-        const SizedBox(height: 12),
-
-        // Carousel of communities with Location strictly under Community Name
-        SizedBox(
-          height: 148,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: communities.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              final c = communities[index];
-              final communityProvider = context.read<CommunityProvider>();
-
-              return InkWell(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => CommunityDetailScreen(communityId: c.id)),
-                  );
-                },
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  width: 210,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF161B22),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF30363D)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 34,
-                            height: 34,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF21262D),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(c.iconEmoji, style: const TextStyle(fontSize: 18)),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF21262D),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF30363D)),
-                            ),
-                            child: Text(
-                              c.category,
-                              style: const TextStyle(fontSize: 10, color: Color(0xFF8B949E), fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Line 1: Community Name
-                      Text(
-                        c.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFF0F6FC),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-
-                      // Line 2: Directly under name - Location
-                      Row(
-                        children: [
-                          const Icon(Icons.place_rounded, size: 12, color: Color(0xFF58A6FF)),
-                          const SizedBox(width: 3),
-                          Expanded(
-                            child: Text(
-                              c.locationSpot,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF58A6FF),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${c.memberCount} members',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 10.5, color: Color(0xFF8B949E)),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          InkWell(
-                            onTap: () => communityProvider.toggleJoinCommunity(c.id),
-                            borderRadius: BorderRadius.circular(6),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: c.isJoined ? const Color(0xFF21262D) : const Color(0xFF238636),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: c.isJoined ? const Color(0xFF30363D) : Colors.transparent,
-                                ),
-                              ),
-                              child: Text(
-                                c.isJoined ? 'Joined ✓' : 'Join +',
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: c.isJoined ? const Color(0xFF3FB950) : Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  // --- 5. My Groups Header & Carousel ---
-  Widget _buildMyGroupsSection(List<Community> joinedCommunities) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Row(
-                children: [
-                  const Text(
-                    'My Groups',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFFF0F6FC),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF21262D),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF30363D)),
-                    ),
-                    child: Text(
-                      '${joinedCommunities.length}',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF58A6FF)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            InkWell(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const CommunitiesScreen(isTab: false)),
-                );
-              },
-              child: const Row(
-                children: [
-                  Text(
-                    'View all',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.bold,
@@ -1131,103 +576,136 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 10),
 
-        joinedCommunities.isEmpty
-            ? Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
+        if (joinedCommunities.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF161B22),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF30363D)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF21262D),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text('🌐', style: TextStyle(fontSize: 20)),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'You haven\'t joined any groups yet. Explore communities to join!',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF8B949E)),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          // WhatsApp-style horizontal tile per group
+          Column(
+            children: joinedCommunities.map((c) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFF161B22),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: const Color(0xFF30363D)),
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF21262D),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text('🌐', style: TextStyle(fontSize: 20)),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Text(
-                        'Join city communities above to participate in discussions!',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF8B949E)),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : SizedBox(
-                height: 128,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: joinedCommunities.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (context, index) {
-                    final c = joinedCommunities[index];
-                    return InkWell(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => CommunityDetailScreen(communityId: c.id)),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        width: 145,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF161B22),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFF30363D)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Color(c.bannerColorHex),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(c.iconEmoji, style: const TextStyle(fontSize: 16)),
-                                ),
-                                const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF3FB950)),
-                              ],
+                child: Material(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => CommunityDetailScreen(communityId: c.id)),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Color(c.bannerColorHex),
+                              shape: BoxShape.circle,
                             ),
-                            Column(
+                            alignment: Alignment.center,
+                            child: Text(c.iconEmoji, style: const TextStyle(fontSize: 20)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  c.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFFF0F6FC)),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        c.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFF0F6FC),
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF21262D),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: const Color(0xFF30363D)),
+                                      ),
+                                      child: Text(
+                                        c.category,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: Color(0xFF8B949E),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  c.regionName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 10.5, color: Color(0xFF8B949E)),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.place_rounded, size: 12, color: Color(0xFF58A6FF)),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: Text(
+                                        '${c.locationSpot} • ${c.memberCount} members',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF8B949E)),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF8B949E)),
+                        ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
+              );
+            }).toList(),
+          ),
       ],
     );
   }

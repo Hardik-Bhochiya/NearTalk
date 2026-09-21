@@ -402,8 +402,6 @@ class _CommunitiesScreenState extends State<CommunitiesScreen> with SingleTicker
     final auth = context.watch<AuthProvider>();
     final currentUserId = auth.currentUser?.id ?? 'user-hardik';
 
-    final regions = communityProvider.regions;
-    final selectedRegion = communityProvider.selectedRegion ?? (regions.isNotEmpty ? regions.first : null);
     final joinedCommunities = communityProvider.joinedCommunities;
 
     // Filter all communities across the app without forcing a single city

@@ -419,30 +419,51 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   Tab(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.groups_rounded, size: 16),
+                        const Icon(Icons.groups_rounded, size: 15),
                         const SizedBox(width: 4),
-                        Text('Communities (${joinedCommunities.length})'),
+                        Flexible(
+                          child: Text(
+                            'Groups (${joinedCommunities.length})',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Tab(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.people_rounded, size: 16),
+                        const Icon(Icons.people_rounded, size: 15),
                         const SizedBox(width: 4),
-                        Text('Friends (${friends.length})'),
+                        Flexible(
+                          child: Text(
+                            'Friends (${friends.length})',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Tab(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.question_answer_rounded, size: 16),
+                        const Icon(Icons.question_answer_rounded, size: 15),
                         const SizedBox(width: 4),
-                        Text('Posts (${userQuestions.length})'),
+                        Flexible(
+                          child: Text(
+                            'Posts (${userQuestions.length})',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
                       ],
                     ),
                   ),
